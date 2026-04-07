@@ -1,0 +1,43 @@
+services:
+  # ─── Nginx Global ───────────────────────────────────
+  nginx-global:
+    image: nginx:alpine
+    container_name: nginx_global
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # - /etc/letsencrypt:/etc/letsencrypt:ro  # Descomentar cuando tengas HTTPS
+    restart: unless-stopped
+    depends_on:
+      - portfolio-landing
+    networks:
+      - portfolio-net
+
+  # ─── Landing Page (Vue 3 SPA) ──────────────────────
+  portfolio-landing:
+    build: ./landing/frontend
+    container_name: portfolio_landing
+    restart: unless-stopped
+    networks:
+      - portfolio-net
+
+  # ─── Chatbot Backend (FastAPI + RAG) — Fase 2 ──────
+  # Descomentar cuando el backend esté listo:
+  #
+  # portfolio-chatbot:
+  #   build: ./landing/backend
+  #   container_name: portfolio_chatbot
+  #   environment:
+  #     - LLM_API_KEY=${LLM_API_KEY}
+  #     - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash}
+  #   volumes:
+  #     - ./landing/backend/data:/app/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - portfolio-net
+
+networks:
+  portfolio-net:
+    external: true

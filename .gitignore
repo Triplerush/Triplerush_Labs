@@ -1,0 +1,37 @@
+# ─── Dependencies ─────────────────────────────────
+node_modules/
+dist/
+.output/
+
+# ─── Environment ──────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Docker ───────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Python ───────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# ─── IDE ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Logs ─────────────────────────────────────────
+*.log
+npm-debug.log*
+
+docs/
