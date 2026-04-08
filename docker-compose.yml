@@ -1,17 +1,17 @@
 services:
   # ─── Nginx Global ───────────────────────────────────
+  # Los puertos se definen en docker-compose.override.yml (no aquí)
+  # porque varían entre local (3080) y producción (80/443).
+  # Docker Compose mergea listas (ports) por concatenación, no por reemplazo.
   nginx-global:
     image: nginx:alpine
     container_name: nginx_global
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      # - /etc/letsencrypt:/etc/letsencrypt:ro  # Descomentar cuando tengas HTTPS
     restart: unless-stopped
     depends_on:
       - portfolio-landing
+      - portfolio-chatbot
     networks:
       - portfolio-net
 
@@ -23,21 +23,21 @@ services:
     networks:
       - portfolio-net
 
-  # ─── Chatbot Backend (FastAPI + RAG) — Fase 2 ──────
-  # Descomentar cuando el backend esté listo:
-  #
-  # portfolio-chatbot:
-  #   build: ./landing/backend
-  #   container_name: portfolio_chatbot
-  #   environment:
-  #     - LLM_API_KEY=${LLM_API_KEY}
-  #     - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash}
-  #   volumes:
-  #     - ./landing/backend/data:/app/data
-  #   restart: unless-stopped
-  #   networks:
-  #     - portfolio-net
+  # ─── Chatbot Backend (FastAPI + RAG) ────────────────
+  portfolio-chatbot:
+    build: ./landing/backend
+    container_name: portfolio_chatbot
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash}
+    volumes:
+      - ./landing/backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - portfolio-net
 
+# La red se crea automáticamente con nombre explícito.
+# Los subproyectos (auto_profilling, etc.) la referencian como external: true.
 networks:
   portfolio-net:
-    external: true
+    name: portfolio-net

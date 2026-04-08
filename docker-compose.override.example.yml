@@ -1,16 +1,15 @@
 # docker-compose.override.example.yml
-# Copiar como docker-compose.override.yml para desarrollo local:
+# ═══════════════════════════════════════════════════════════
+# Copiar como docker-compose.override.yml:
 #   cp docker-compose.override.example.yml docker-compose.override.yml
 #
-# Docker Compose automáticamente mergea ambos archivos al hacer:
-#   docker compose up
+# Docker Compose carga este archivo automáticamente junto al base.
+# Los puertos se definen SOLO aquí (no en docker-compose.yml) porque
+# Docker Compose concatena listas, no las reemplaza.
 #
-# En la VPS este archivo NO existe — solo vive en tu máquina local.
+# En la VPS se reemplaza por un override con puertos 80/443 + SSL.
 
 services:
   nginx-global:
     ports:
       - "3080:80"      # Cambiar si 3080 también está ocupado
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      # Sin certificados SSL en local
