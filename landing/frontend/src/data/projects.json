@@ -1,0 +1,16 @@
+[
+  {
+    "id": "auto-profiling",
+    "name": "Auto Profiling + AI Layer",
+    "description": "Plataforma que visualiza análisis de datos como dashboards interactivos con agente AI integrado",
+    "url": "/profiling/",
+    "status": "live",
+    "stack": ["FastAPI", "Vue 3", "Chart.js", "LangChain", "FAISS", "Docker"],
+    "highlights": [
+      "Agente AI que explica dashboards en lenguaje natural",
+      "RAG sobre Data Contracts para búsqueda semántica",
+      "Model Service con predicciones + explicaciones LLM"
+    ],
+    "demonstrates": ["RAG", "Agents", "Model Serving", "Full-stack", "MLOps"]
+  }
+]
