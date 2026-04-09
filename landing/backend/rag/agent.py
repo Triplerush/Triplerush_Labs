@@ -3,15 +3,15 @@ agent.py — Conversational AI Agent
 
 Orchestrates the RAG pipeline: receives a user message, retrieves
 relevant context, constructs a prompt, and streams the LLM response
-using Gemini 2.0 Flash via the google-genai SDK.
+using Gemini via the google-genai SDK (reusing the client from RAGIndex).
 """
 
 import json
 import logging
 import os
-from typing import AsyncGenerator
+from typing import Generator
 
-from google import genai
+from google.genai import types as genai_types
 
 from rag.indexer import RAGIndex
 from rag.retriever import retrieve, format_context
@@ -87,12 +87,16 @@ def _build_messages(
     return messages
 
 
-async def generate_response(
+def generate_response(
     message: str,
     rag_index: RAGIndex,
     history: list[dict] | None = None,
-) -> AsyncGenerator[str, None]:
+) -> Generator[str, None, None]:
     """Generate a streaming RAG response as SSE events.
+
+    This is a sync generator intentionally — FastAPI's StreamingResponse
+    runs sync generators in a threadpool, avoiding event loop blocking
+    during the synchronous Google API calls.
 
     Args:
         message: User's question.
@@ -119,20 +123,15 @@ async def generate_response(
         messages = _build_messages(message, context, history)
 
         # ─── 3. Call Gemini with streaming ────────────────
-        api_key = os.getenv("LLM_API_KEY")
-        if not api_key:
-            logger.error("LLM_API_KEY not configured")
-            yield f"data: {json.dumps({'type': 'error', 'message': FALLBACK_MESSAGE})}\n\n"
-            return
+        model_name = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
 
-        model_name = os.getenv("LLM_MODEL", "gemini-2.0-flash")
-
-        client = genai.Client(api_key=api_key)
+        # Reuse the client already created during index build
+        client = rag_index.client
 
         response = client.models.generate_content_stream(
             model=model_name,
             contents=messages,
-            config=genai.types.GenerateContentConfig(
+            config=genai_types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 temperature=0.7,
                 max_output_tokens=1024,

@@ -16,6 +16,7 @@ import logging
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,11 +51,20 @@ def _check_rate_limit(client_ip: str) -> bool:
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
 
-    # Clean old entries
+    # Clean old entries for this IP
     _rate_limit_store[client_ip] = [
         ts for ts in _rate_limit_store[client_ip]
         if ts > window_start
     ]
+
+    # Periodic cleanup: prune stale IPs (every ~100 calls)
+    if len(_rate_limit_store) > 50:
+        stale_ips = [
+            ip for ip, timestamps in _rate_limit_store.items()
+            if not timestamps or timestamps[-1] < window_start
+        ]
+        for ip in stale_ips:
+            del _rate_limit_store[ip]
 
     if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
         return False
@@ -134,6 +144,17 @@ async def health_check():
         "rag_ready": rag_index is not None,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
+
+
+@app.get("/v1/projects")
+async def get_projects():
+    """Serve projects.json — single source of truth for both frontend and RAG."""
+    projects_path = Path("./data/projects.json")
+    if not projects_path.exists():
+        return JSONResponse(content=[], status_code=200)
+    with open(projects_path, "r", encoding="utf-8") as f:
+        projects = json.load(f)
+    return JSONResponse(content=projects)
 
 
 @app.post("/v1/chat")

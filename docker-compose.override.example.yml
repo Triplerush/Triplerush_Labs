@@ -1,15 +1,13 @@
 # docker-compose.override.example.yml
 # ═══════════════════════════════════════════════════════════
-# Copiar como docker-compose.override.yml:
+# DEPRECATED: Ya no es necesario para cambiar puertos.
+# Usa la variable NGINX_PORT en .env en su lugar:
+#   NGINX_PORT=3080    → local
+#   (sin definir)      → producción (default: 80)
+#
+# Este archivo se mantiene como referencia para overrides
+# locales que no sean puertos (por ejemplo, montar volúmenes
+# de código fuente para hot-reload durante desarrollo).
+#
+# Si lo usas, copia como docker-compose.override.yml:
 #   cp docker-compose.override.example.yml docker-compose.override.yml
-#
-# Docker Compose carga este archivo automáticamente junto al base.
-# Los puertos se definen SOLO aquí (no en docker-compose.yml) porque
-# Docker Compose concatena listas, no las reemplaza.
-#
-# En la VPS se reemplaza por un override con puertos 80/443 + SSL.
-
-services:
-  nginx-global:
-    ports:
-      - "3080:80"      # Cambiar si 3080 también está ocupado

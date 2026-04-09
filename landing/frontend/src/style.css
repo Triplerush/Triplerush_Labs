@@ -214,3 +214,12 @@ body.light {
 .stagger-children.visible > *:nth-child(4) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
 .stagger-children.visible > *:nth-child(5) { transition-delay: 0.5s; opacity: 1; transform: translateY(0); }
 .stagger-children.visible > *:nth-child(6) { transition-delay: 0.6s; opacity: 1; transform: translateY(0); }
+
+/* ═══════════════════════════════════════════════════════════
+   CHAT WIDGET GLOBAL STYLES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Ensure chat widget is always above other elements */
+#chat-widget {
+  z-index: 9999;
+}

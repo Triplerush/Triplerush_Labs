@@ -1,16 +1,43 @@
 """
 retriever.py — Semantic Search Retriever
 
-Uses the FAISS index built by indexer.py to find the most relevant
-chunks for a given user query using cosine similarity.
+Uses the NumPy embedding matrix built by indexer.py to find the most
+relevant chunks for a given user query using cosine similarity.
+Embeddings are generated via Gemini gemini-embedding-exp-03-07.
 """
 
 import logging
-import numpy as np
+import os
 
-from rag.indexer import RAGIndex, Chunk
+import numpy as np
+from google import genai
+from google.genai import types
+
+from rag.indexer import RAGIndex, Chunk, EMBEDDING_MODEL, EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
+
+
+def _embed_query(client: genai.Client, query: str) -> np.ndarray:
+    """Generate a normalized embedding for a single query.
+
+    Uses RETRIEVAL_QUERY task type (optimized for queries, not documents).
+    """
+    response = client.models.embed_content(
+        model=EMBEDDING_MODEL,
+        contents=query,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=EMBEDDING_DIM,
+        ),
+    )
+
+    vector = np.array(response.embeddings[0].values, dtype=np.float32)
+    norm = np.linalg.norm(vector)
+    if norm > 0:
+        vector = vector / norm
+
+    return vector
 
 
 def retrieve(
@@ -23,27 +50,26 @@ def retrieve(
 
     Args:
         query: Natural language question from the user.
-        rag_index: The RAGIndex containing FAISS index, chunks, and embedder.
+        rag_index: The RAGIndex containing embeddings, chunks, and genai client.
         top_k: Maximum number of chunks to return.
         min_score: Minimum cosine similarity score to include a result.
 
     Returns:
         List of dicts with keys: text, source, section, score, metadata.
     """
-    # Generate query embedding (same model as indexing)
-    query_embedding = rag_index.embedder.encode(
-        [query],
-        normalize_embeddings=True,
-        show_progress_bar=False,
-    )
-    query_embedding = np.array(query_embedding, dtype=np.float32)
+    # Generate query embedding via Gemini
+    query_vector = _embed_query(rag_index.client, query)
 
-    # Search FAISS index
-    scores, indices = rag_index.faiss_index.search(query_embedding, top_k)
+    # Cosine similarity = dot product of normalized vectors
+    scores = rag_index.embeddings @ query_vector
+
+    # Get top-k indices sorted by score (descending)
+    top_indices = np.argsort(scores)[::-1][:top_k]
 
     results = []
-    for score, idx in zip(scores[0], indices[0]):
-        if idx < 0 or score < min_score:
+    for idx in top_indices:
+        score = float(scores[idx])
+        if score < min_score:
             continue
 
         chunk: Chunk = rag_index.chunks[idx]
@@ -51,7 +77,7 @@ def retrieve(
             "text": chunk.text,
             "source": chunk.source,
             "section": chunk.section,
-            "score": float(score),
+            "score": score,
             "metadata": chunk.metadata,
         })
 

@@ -2,29 +2,29 @@
 indexer.py — RAG Index Builder
 
 Loads CV (markdown) and projects (JSON), chunks them semantically,
-generates embeddings with sentence-transformers, and builds a FAISS index.
+generates embeddings with Gemini gemini-embedding-exp-03-07 via google-genai,
+and builds an in-memory cosine-similarity index using NumPy.
 
-The index is built in-memory on startup. Given the small dataset size
-(CV + a few projects), persistence to disk is unnecessary — rebuilding
-takes only a few seconds.
+No FAISS, no sentence-transformers, no PyTorch — pure google-genai + NumPy.
+The dataset is small (~15 chunks), so a brute-force NumPy search is instant.
 """
 
 import json
+import os
 import re
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field
 
 import numpy as np
-import faiss
-from sentence_transformers import SentenceTransformer
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-# ─── Embedding model ─────────────────────────────────────────
-# all-MiniLM-L6-v2: fast, 384-dim, great for semantic search
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
+# ─── Embedding config ────────────────────────────────────────
+EMBEDDING_MODEL = "gemini-embedding-exp-03-07"
+EMBEDDING_DIM = 256  # reduced dimensionality (256 is enough for ~15 chunks)
 
 
 @dataclass
@@ -38,10 +38,10 @@ class Chunk:
 
 @dataclass
 class RAGIndex:
-    """Container for the FAISS index and associated chunks."""
-    faiss_index: faiss.IndexFlatIP
+    """Container for the embedding matrix and associated chunks."""
+    embeddings: np.ndarray  # shape: (n_chunks, EMBEDDING_DIM), normalized
     chunks: list[Chunk]
-    embedder: SentenceTransformer
+    client: genai.Client
 
 
 def _chunk_markdown(text: str, source: str = "cv") -> list[Chunk]:
@@ -124,6 +124,38 @@ def _chunk_projects(projects: list[dict]) -> list[Chunk]:
     return chunks
 
 
+def _embed_texts(client: genai.Client, texts: list[str]) -> np.ndarray:
+    """Generate embeddings for a list of texts using Gemini.
+
+    Args:
+        client: google-genai Client instance.
+        texts: List of text strings to embed.
+
+    Returns:
+        Normalized embedding matrix of shape (len(texts), EMBEDDING_DIM).
+    """
+    response = client.models.embed_content(
+        model=EMBEDDING_MODEL,
+        contents=texts,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=EMBEDDING_DIM,
+        ),
+    )
+
+    vectors = np.array(
+        [e.values for e in response.embeddings],
+        dtype=np.float32,
+    )
+
+    # Normalize for cosine similarity (dot product of unit vectors)
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1, norms)  # avoid division by zero
+    vectors = vectors / norms
+
+    return vectors
+
+
 def build_index(data_dir: str = "./data") -> RAGIndex:
     """Build the complete RAG index from CV and projects data.
 
@@ -131,7 +163,7 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
         data_dir: Path to the data directory containing cv.md and projects.json.
 
     Returns:
-        RAGIndex with FAISS index, chunks, and the embedding model.
+        RAGIndex with embedding matrix, chunks, and the genai client.
     """
     data_path = Path(data_dir)
     all_chunks: list[Chunk] = []
@@ -161,23 +193,20 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
         logger.error("No data found to index!")
         raise ValueError("No data available for indexing. Check data/ directory.")
 
-    # ─── Generate embeddings ──────────────────────────────
-    logger.info(f"Loading embedding model: {EMBEDDING_MODEL}")
-    embedder = SentenceTransformer(EMBEDDING_MODEL)
+    # ─── Generate embeddings via Gemini ───────────────────
+    api_key = os.getenv("LLM_API_KEY")
+    if not api_key:
+        raise ValueError("LLM_API_KEY not configured. Cannot generate embeddings.")
+
+    client = genai.Client(api_key=api_key)
 
     texts = [chunk.text for chunk in all_chunks]
-    logger.info(f"Generating embeddings for {len(texts)} chunks...")
-    embeddings = embedder.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-    embeddings = np.array(embeddings, dtype=np.float32)
-
-    # ─── Build FAISS index ────────────────────────────────
-    # Using IndexFlatIP (Inner Product) with normalized vectors = cosine similarity
-    index = faiss.IndexFlatIP(EMBEDDING_DIM)
-    index.add(embeddings)
-    logger.info(f"FAISS index built with {index.ntotal} vectors (dim={EMBEDDING_DIM})")
+    logger.info(f"Generating embeddings for {len(texts)} chunks via Gemini {EMBEDDING_MODEL}...")
+    embeddings = _embed_texts(client, texts)
+    logger.info(f"Index built: {embeddings.shape[0]} vectors (dim={embeddings.shape[1]})")
 
     return RAGIndex(
-        faiss_index=index,
+        embeddings=embeddings,
         chunks=all_chunks,
-        embedder=embedder,
+        client=client,
     )

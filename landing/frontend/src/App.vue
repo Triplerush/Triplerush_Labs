@@ -58,7 +58,7 @@
       </div>
     </footer>
 
-    <!-- Chat Widget Placeholder (Fase 3) -->
+    <!-- Chat Widget (Fase 3 — AI Chatbot) -->
     <ChatWidget />
   </div>
 </template>
@@ -72,11 +72,11 @@ import AboutMe from './components/AboutMe.vue'
 import ContactSection from './components/ContactSection.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import ChatWidget from './components/ChatWidget.vue'
-import projects from './data/projects.json'
 
 const theme = ref('dark')
 const mobileMenuOpen = ref(false)
 const currentYear = new Date().getFullYear()
+const projects = ref([])
 
 const navLinks = [
   { id: 'projects', href: '#projects', label: 'Projects' },
@@ -99,10 +99,20 @@ const toggleTheme = () => {
 
 provide('theme', theme)
 
-onMounted(() => {
+onMounted(async () => {
   const savedTheme = localStorage.getItem('theme') || 'dark'
   theme.value = savedTheme
   document.body.className = savedTheme
+
+  // Fetch projects from backend (single source of truth)
+  try {
+    const res = await fetch('/v1/projects')
+    if (res.ok) {
+      projects.value = await res.json()
+    }
+  } catch {
+    // Backend unavailable — projects section stays empty
+  }
 
   // Intersection Observer for scroll animations
   const observer = new IntersectionObserver(

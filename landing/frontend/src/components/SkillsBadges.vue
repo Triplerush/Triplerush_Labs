@@ -58,9 +58,9 @@ const categories = [
     colorFrom: '#8b5cf6',
     colorTo: '#a855f7',
     skills: [
-      'RAG Systems', 'LangChain', 'PyTorch', 'TensorFlow',
-      'FAISS', 'ChromaDB', 'Fine-tuning (LoRA/QLoRA)',
-      'Sentence Transformers', 'OpenSearch', 'Hugging Face',
+      'RAG Systems', 'LangChain', 'Haystack', 'PyTorch', 'TensorFlow',
+      'Scikit-Learn', 'FAISS', 'ChromaDB', 'Fine-tuning (LoRA/QLoRA)',
+      'Sentence Transformers', 'OpenSearch', 'Pandas', 'NumPy',
     ],
   },
   {
@@ -71,8 +71,8 @@ const categories = [
     colorTo: '#6366f1',
     skills: [
       'FastAPI', 'Spring Boot', 'Python', 'Java',
-      'PostgreSQL', 'REST APIs', 'WebSockets',
-      'Alembic', 'Flyway', 'SQLAlchemy',
+      'Pydantic', 'SQLModel', 'PostgreSQL', 'MySQL', 'Redis',
+      'REST APIs', 'Alembic', 'Flyway',
     ],
   },
   {
@@ -82,9 +82,9 @@ const categories = [
     colorFrom: '#10b981',
     colorTo: '#06b6d4',
     skills: [
-      'Docker', 'Kubernetes', 'GitHub Actions', 'Jenkins',
-      'Terraform', 'CI/CD', 'SonarQube', 'Nginx',
-      'MLflow', 'Linux',
+      'Docker', 'Kubernetes', 'AWS', 'GitHub Actions', 'Jenkins',
+      'Azure DevOps', 'Terraform', 'CI/CD', 'SonarQube', 'Nginx',
+      'Linux', 'Locust',
     ],
   },
   {
@@ -94,8 +94,8 @@ const categories = [
     colorFrom: '#f59e0b',
     colorTo: '#ef4444',
     skills: [
-      'Vue 3', 'Tailwind CSS', 'Chart.js', 'Vite',
-      'Responsive Design', 'Composition API',
+      'Vue 3', 'React', 'Tailwind CSS', 'Chart.js', 'Vite',
+      'Next.js', 'Responsive Design',
     ],
   },
 ]

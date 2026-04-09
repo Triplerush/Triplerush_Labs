@@ -24,9 +24,15 @@
               <p>
                 My path is unconventional: I started in <strong class="opacity-100">Backend Engineering</strong> 
                 (Java/Spring Boot, Python/FastAPI) and evolved toward AI — bringing software engineering 
-                discipline to the world of ML. I build <strong class="opacity-100">RAG pipelines</strong>, 
-                orchestrate <strong class="opacity-100">LLM agents</strong>, and deploy them with proper 
-                CI/CD, monitoring, and infrastructure.
+                discipline to the world of ML. Currently at <strong class="opacity-100">PHAXSI</strong>, 
+                I've refactored a monolithic backend (~3,200 LOC) into a modular architecture and 
+                achieved a <strong class="opacity-100">10× performance improvement</strong> on geospatial 
+                reporting pipelines.
+              </p>
+              <p>
+                Previously at <strong class="opacity-100">Anyone AI</strong>, I led the development of a 
+                <strong class="opacity-100">RAG system</strong> for insurance policy queries using OpenSearch 
+                and LangChain, and built ML pipelines that improved model accuracy by up to 15%.
               </p>
               <p>
                 My unique value? I bridge the gap between the AI researcher who creates a model 
@@ -34,68 +40,57 @@
                 with FAISS/OpenSearch</strong> to <strong class="opacity-100">Docker/Kubernetes deployments</strong>,
                 I own the full lifecycle.
               </p>
-              <p>
-                Currently deepening my expertise in <strong class="opacity-100">Reinforcement Learning</strong> 
-                (the foundation of RLHF for LLM alignment) and <strong class="opacity-100">DevOps/MLOps</strong> 
-                (Docker, K8s, Terraform, CI/CD pipelines).
-              </p>
             </div>
           </div>
         </div>
 
-        <!-- Career Roadmap column -->
+        <!-- Certifications column -->
         <div class="lg:col-span-2 section-animate" style="animation-delay: 0.2s;">
           <div class="glass-card rounded-2xl p-6 sm:p-8 hover:translate-y-0">
             <h3 class="text-xl font-bold mb-6">
-              🗺️ Career Roadmap
+              🏅 Certifications & Training
             </h3>
-            
-            <div class="relative">
-              <!-- Vertical line -->
-              <div class="absolute left-4 top-6 bottom-6 w-0.5 rounded-full"
-                   style="background: linear-gradient(to bottom, var(--color-brand-500), var(--color-accent-500), var(--color-surface-700));">
-              </div>
 
-              <!-- Phase items -->
-              <div v-for="(phase, index) in phases" :key="phase.label"
-                   class="relative pl-12 pb-8 last:pb-0">
-                <!-- Dot -->
-                <div class="absolute left-2.5 top-1 w-3 h-3 rounded-full border-2"
-                     :class="phase.active 
-                       ? 'bg-brand-500 border-brand-400 shadow-[0_0_8px_var(--color-brand-500)]' 
-                       : theme === 'dark' ? 'bg-surface-700 border-surface-600' : 'bg-gray-200 border-gray-300'">
-                </div>
-
-                <!-- Content -->
-                <div>
-                  <span class="text-[10px] font-bold tracking-wider uppercase"
-                        :class="phase.active ? 'text-brand-400' : 'opacity-40'">
-                    {{ phase.timeline }}
+            <div class="space-y-4">
+              <div v-for="cert in certifications" :key="cert.name"
+                   class="group relative pl-4 border-l-2 transition-all duration-200"
+                   :class="theme === 'dark' 
+                     ? 'border-white/10 hover:border-brand-400' 
+                     : 'border-black/10 hover:border-brand-500'">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 class="text-sm font-bold leading-tight">{{ cert.name }}</h4>
+                    <p class="text-xs mt-0.5"
+                       :class="theme === 'dark' ? 'text-brand-300' : 'text-brand-600'">
+                      {{ cert.institution }}
+                    </p>
+                  </div>
+                  <span class="text-[10px] font-semibold tracking-wider uppercase shrink-0 px-2 py-0.5 rounded-full"
+                        :class="theme === 'dark' 
+                          ? 'bg-white/5 text-white/50' 
+                          : 'bg-black/5 text-black/40'">
+                    {{ cert.year }}
                   </span>
-                  <h4 class="text-sm font-bold mt-1" :class="{ 'opacity-50': !phase.active }">
-                    {{ phase.title }}
-                  </h4>
-                  <p class="text-xs mt-1 opacity-50">
-                    {{ phase.description }}
-                  </p>
                 </div>
+                <p v-if="cert.detail" class="text-xs mt-1 opacity-40">{{ cert.detail }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Currently learning -->
+          <!-- Education -->
           <div class="glass-card rounded-2xl p-6 mt-6 hover:translate-y-0">
-            <h4 class="text-sm font-bold mb-3 opacity-70">📚 Currently Learning</h4>
-            <ul class="space-y-2 text-xs opacity-60">
-              <li class="flex items-start gap-2">
-                <span class="text-brand-400 mt-0.5">▸</span>
-                <span><strong class="opacity-100">Reinforcement Learning</strong> — MDPs, Q-Learning, DQN, A2C (CODAERUS)</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-brand-400 mt-0.5">▸</span>
-                <span><strong class="opacity-100">DevOps Multicloud</strong> — Docker, K8s, Jenkins, Terraform (TecyLab)</span>
-              </li>
-            </ul>
+            <h4 class="text-sm font-bold mb-3 opacity-70">🎓 Education</h4>
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+                   :class="theme === 'dark' ? 'bg-white/5' : 'bg-black/5'">
+                🏛️
+              </div>
+              <div>
+                <h4 class="text-sm font-bold">Ingeniería de Sistemas</h4>
+                <p class="text-xs opacity-50">Universidad Nacional de San Agustín (UNSA)</p>
+                <p class="text-[10px] opacity-30 mt-0.5">2025</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -108,24 +103,42 @@ import { inject } from 'vue'
 
 const theme = inject('theme')
 
-const phases = [
+const certifications = [
   {
-    timeline: 'Now — 12 months',
-    title: 'AI Backend Engineer / Applied ML Engineer',
-    description: 'RAG systems, LLM orchestration, containerized AI apps, CI/CD for ML.',
-    active: true,
+    name: 'Soluciones de IA con Agentes Autónomos',
+    institution: 'AnyoneAI',
+    year: '2025',
+    detail: 'Desarrollo de soluciones de inteligencia artificial basadas en agentes',
   },
   {
-    timeline: '1 — 3 years',
-    title: 'AI Software Engineer / MLOps Engineer',
-    description: 'Fine-tuning, autonomous agents, Continuous Training, RL in production.',
-    active: false,
+    name: 'Aplicaciones basadas en LLMs',
+    institution: 'AnyoneAI',
+    year: '2025',
+    detail: 'Construcción de aplicaciones sobre modelos de lenguaje',
   },
   {
-    timeline: '3 — 5+ years',
-    title: 'Principal AI Architect / AI Tech Lead',
-    description: 'Multi-model architectures, AI governance, technical leadership.',
-    active: false,
+    name: 'Especialista en DevOps Multicloud',
+    institution: 'TecyLab',
+    year: '2025',
+    detail: 'Docker, K8s (EKS/AKS), Jenkins, GitHub Actions, Azure DevOps, SonarQube, Terraform',
+  },
+  {
+    name: 'Aprendizaje por Refuerzo con Python',
+    institution: 'CODAERUS',
+    year: '2025',
+    detail: 'MDPs, Q-Learning, DQN, REINFORCE, A2C — base técnica para RLHF',
+  },
+  {
+    name: 'Programación Senior con Spring Boot',
+    institution: 'TecyLab',
+    year: '2024',
+    detail: 'Multicloud y Microservicios',
+  },
+  {
+    name: 'Oracle Next Education F2 T4 Back-end',
+    institution: 'Alura Latam',
+    year: '2023',
+    detail: null,
   },
 ]
 </script>

@@ -4,11 +4,10 @@ uvicorn[standard]==0.30.0
 python-dotenv==1.0.1
 
 # ─── RAG Pipeline ─────────────────────────────────
-# google-genai: SDK oficial de Google para Gemini (reemplaza langchain-google-genai)
-# Ver nota en GUIA_PORTFOLIO_ORQUESTADOR.md Fase 2 sobre esta decisión.
+# google-genai: SDK oficial de Google para Gemini
+# Handles both LLM calls AND embeddings (text-embedding-004)
+# No need for sentence-transformers, torch, or faiss.
 google-genai>=1.0.0
-sentence-transformers>=3.0.0
-faiss-cpu>=1.8.0
 
 # ─── Utilities ────────────────────────────────────
 pydantic==2.9.0

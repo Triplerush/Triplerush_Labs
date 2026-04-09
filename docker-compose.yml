@@ -1,11 +1,13 @@
 services:
   # ─── Nginx Global ───────────────────────────────────
-  # Los puertos se definen en docker-compose.override.yml (no aquí)
-  # porque varían entre local (3080) y producción (80/443).
-  # Docker Compose mergea listas (ports) por concatenación, no por reemplazo.
+  # Puerto configurable via NGINX_PORT:
+  #   - Producción (VPS): NGINX_PORT no definido → usa 80 (default)
+  #   - Local: NGINX_PORT=3080 en .env → usa 3080
   nginx-global:
     image: nginx:alpine
     container_name: nginx_global
+    ports:
+      - "${NGINX_PORT:-80}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
@@ -29,7 +31,7 @@ services:
     container_name: portfolio_chatbot
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash}
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash-lite}
     volumes:
       - ./landing/backend/data:/app/data
     restart: unless-stopped
