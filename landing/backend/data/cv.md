@@ -11,6 +11,14 @@
 
 Ingeniero de software con base sólida en backend (Java/Spring Boot, Python/FastAPI) evolucionando hacia AI Engineering. Especializado en el diseño de sistemas escalables basados en arquitecturas de microservicios y monolitos modulares, desarrollo de APIs RESTful seguras y mantenibles, y construcción de componentes desacoplados para entornos distribuidos. Experiencia en sistemas RAG, orquestación de LLMs con LangChain, y despliegue de aplicaciones inteligentes con Docker/Kubernetes. Complemento este perfil con conocimientos en procesamiento de datos y machine learning aplicado, aportando soluciones backend robustas, inteligentes y orientadas a alta disponibilidad.
 
+## Datos
+
+- Fernando Ruben Canal Mendoza
+- Arequipa, Perú
+- Número de teléfono: +51 975160514
+- E-mail: fernandorcm9@gmail.com
+- Linkedin: www.linkedin.com/in/fcanalm
+
 ---
 
 ## Experiencia Laboral

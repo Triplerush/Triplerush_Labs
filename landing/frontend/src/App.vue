@@ -54,7 +54,7 @@
     <footer class="border-t py-8 text-center text-sm opacity-50 transition-colors"
             :class="theme === 'dark' ? 'border-white/10' : 'border-black/10'">
       <div class="max-w-6xl mx-auto px-4">
-        <p>&copy; {{ currentYear }} Fernando. Built with Vue 3 + Tailwind CSS v4.</p>
+        <p>&copy; {{ currentYear }} Fernando. Construido con Vue 3 + Tailwind CSS v4.</p>
       </div>
     </footer>
 
@@ -79,10 +79,10 @@ const currentYear = new Date().getFullYear()
 const projects = ref([])
 
 const navLinks = [
-  { id: 'projects', href: '#projects', label: 'Projects' },
+  { id: 'projects', href: '#projects', label: 'Proyectos' },
   { id: 'skills', href: '#skills', label: 'Skills' },
-  { id: 'about', href: '#about', label: 'About' },
-  { id: 'contact', href: '#contact', label: 'Contact' },
+  { id: 'about', href: '#about', label: 'Sobre Mi' },
+  { id: 'contact', href: '#contact', label: 'Contacto' },
 ]
 
 const navClasses = computed(() => {

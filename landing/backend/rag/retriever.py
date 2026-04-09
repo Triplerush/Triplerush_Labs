@@ -3,7 +3,7 @@ retriever.py — Semantic Search Retriever
 
 Uses the NumPy embedding matrix built by indexer.py to find the most
 relevant chunks for a given user query using cosine similarity.
-Embeddings are generated via Gemini gemini-embedding-exp-03-07.
+Embeddings are generated via Gemini gemini-embedding-001.
 """
 
 import logging

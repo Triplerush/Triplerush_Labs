@@ -4,7 +4,7 @@ services:
   #   - Producción (VPS): NGINX_PORT no definido → usa 80 (default)
   #   - Local: NGINX_PORT=3080 en .env → usa 3080
   nginx-global:
-    image: nginx:alpine
+    image: nginx:1.29.8-alpine
     container_name: nginx_global
     ports:
       - "${NGINX_PORT:-80}:80"

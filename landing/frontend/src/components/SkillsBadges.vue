@@ -5,10 +5,10 @@
       <div class="section-animate text-center mb-16">
         <span class="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-50">Stack</span>
         <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-          Technical <span class="gradient-text">Skills</span>
+          Skills <span class="gradient-text">Tecnicos</span>
         </h2>
         <p class="text-base sm:text-lg max-w-2xl mx-auto opacity-60">
-          A blend of AI/ML, backend engineering, and infrastructure — the full stack for shipping intelligent systems.
+          Una combinacion de AI/ML, backend engineering e infraestructura - el stack completo para enviar sistemas inteligentes a produccion.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ const categories = [
   },
   {
     id: 'infra',
-    name: 'Infrastructure & MLOps',
+    name: 'Infraestructura & MLOps',
     icon: '🚀',
     colorFrom: '#10b981',
     colorTo: '#06b6d4',
@@ -89,7 +89,7 @@ const categories = [
   },
   {
     id: 'frontend',
-    name: 'Frontend & Visualization',
+    name: 'Frontend & Visualizacion',
     icon: '🎨',
     colorFrom: '#f59e0b',
     colorTo: '#ef4444',

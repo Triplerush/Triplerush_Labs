@@ -24,7 +24,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
         </span>
-        Open to opportunities
+        Abierto a oportunidades
       </div>
 
       <!-- Name -->
@@ -41,15 +41,15 @@
       <!-- Tagline -->
       <p class="animate-fade-in-up text-base sm:text-lg md:text-xl font-light max-w-2xl mx-auto mb-10 opacity-60"
          style="animation-delay: 0.3s;">
-        Building AI that ships to production — bridging ML, DevOps, and AI Engineering
-        to create intelligent systems that scale.
+        Construyendo IA que llega a produccion, conectando ML, DevOps e Ingenieria de IA
+        para crear sistemas inteligentes que escalan.
       </p>
 
       <!-- CTA Buttons -->
-      <div class="animate-fade-in-up flex flex-wrap items-center justify-center gap-4"
+      <div class="animate-fade-in-up flex flex-wrap items-center justify-center gap-4 mb-16 sm:mb-0"
            style="animation-delay: 0.45s;">
         <a href="https://github.com/triplerush" target="_blank" rel="noopener noreferrer"
-           class="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 text-white"
+           class="group inline-flex items-center justify-center gap-2.5 min-w-[160px] px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-105 text-white"
            style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));"
            id="hero-github">
           <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
@@ -58,10 +58,10 @@
           GitHub
         </a>
 
-        <a href="https://linkedin.com/in/" target="_blank" rel="noopener noreferrer"
-           class="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm border transition-all duration-300 hover:scale-105"
-           :class="theme === 'dark' 
-             ? 'border-white/20 hover:border-brand-400 hover:bg-white/5' 
+        <a href="https://www.linkedin.com/in/fcanalm" target="_blank" rel="noopener noreferrer"
+           class="group inline-flex items-center justify-center gap-2.5 min-w-[160px] px-6 py-3 rounded-xl font-semibold text-sm border transition-all duration-300 hover:scale-105"
+           :class="theme === 'dark'
+             ? 'border-white/20 hover:border-brand-400 hover:bg-white/5'
              : 'border-black/20 hover:border-brand-500 hover:bg-black/5'"
            id="hero-linkedin">
           <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
@@ -71,25 +71,18 @@
         </a>
 
         <a href="#contact"
-           class="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 opacity-70 hover:opacity-100"
+           class="group inline-flex items-center justify-center gap-2.5 min-w-[160px] px-6 py-3 rounded-xl font-semibold text-sm border transition-all duration-300 hover:scale-105"
+           :class="theme === 'dark'
+             ? 'border-white/20 hover:border-brand-400 hover:bg-white/5'
+             : 'border-black/20 hover:border-brand-500 hover:bg-black/5'"
            id="hero-cv">
           <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Download CV
+          Descargar CV
         </a>
       </div>
 
-      <!-- Scroll indicator -->
-      <div class="animate-fade-in absolute bottom-8 left-1/2 -translate-x-1/2 opacity-40"
-           style="animation-delay: 1s;">
-        <div class="flex flex-col items-center gap-2">
-          <span class="text-xs tracking-widest uppercase">Scroll</span>
-          <div class="w-5 h-8 rounded-full border-2 border-current flex items-start justify-center p-1">
-            <div class="w-1 h-2 rounded-full bg-current animate-bounce"></div>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 </template>

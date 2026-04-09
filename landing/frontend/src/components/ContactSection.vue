@@ -2,13 +2,13 @@
   <section id="contact" class="py-24 sm:py-32">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="section-animate text-center">
-        <span class="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-50">Get in Touch</span>
+        <span class="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-50">Contacto</span>
         <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-          Let's <span class="gradient-text">Connect</span>
+          Hablemos y <span class="gradient-text">Conectemos</span>
         </h2>
         <p class="text-base sm:text-lg max-w-xl mx-auto opacity-60 mb-12">
-          Interested in working together or just want to chat about AI engineering? 
-          I'm always open to new opportunities and conversations.
+          Interesado en colaborar o simplemente quieres hablar sobre ingenieria de IA?
+          Siempre estoy abierto a nuevas oportunidades y conversaciones.
         </p>
 
         <!-- Contact cards -->
@@ -28,13 +28,13 @@
 
         <!-- Email direct -->
         <div class="mt-12 section-animate">
-          <a href="mailto:hello@fernando.dev"
+          <a href="mailto:fernandorcm9@gmail.com"
              class="inline-flex items-center gap-2 text-sm font-medium opacity-50 hover:opacity-100 transition-opacity"
              id="contact-email-direct">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            hello@fernando.dev
+            fernandorcm9@gmail.com
           </a>
         </div>
       </div>
@@ -56,8 +56,8 @@ const contactLinks = [
   {
     id: 'linkedin',
     label: 'LinkedIn',
-    sublabel: 'Fernando',
-    href: 'https://linkedin.com/in/',
+    sublabel: '@fcanalm',
+    href: 'https://www.linkedin.com/in/fcanalm',
     colorFrom: '#3b82f6',
     colorTo: '#6366f1',
     icon: '<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>',
@@ -65,8 +65,8 @@ const contactLinks = [
   {
     id: 'email',
     label: 'Email',
-    sublabel: 'hello@fernando.dev',
-    href: 'mailto:hello@fernando.dev',
+    sublabel: 'fernandorcm9@gmail.com',
+    href: 'mailto:fernandorcm9@gmail.com',
     colorFrom: '#10b981',
     colorTo: '#06b6d4',
     icon: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',

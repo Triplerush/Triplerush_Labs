@@ -5,10 +5,10 @@
       <div class="section-animate text-center mb-16">
         <span class="inline-block text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-50">Portfolio</span>
         <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-          Featured <span class="gradient-text">Projects</span>
+          Proyectos <span class="gradient-text">Destacados</span>
         </h2>
         <p class="text-base sm:text-lg max-w-2xl mx-auto opacity-60">
-          Real-world AI applications deployed in production — not notebooks.
+          Aplicaciones de IA desplegadas en produccion - no solo notebooks.
         </p>
       </div>
 
@@ -89,7 +89,7 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          <span class="text-sm font-medium">More projects coming soon</span>
+          <span class="text-sm font-medium">Mas proyectos proximamente</span>
         </div>
       </div>
     </div>

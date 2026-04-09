@@ -1,5 +1,5 @@
 # ── Build stage ──────────────────────────────────────────────
-FROM node:20-alpine AS build
+FROM node:20.20.2-alpine AS build
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # ── Production stage ─────────────────────────────────────────
-FROM nginx:alpine
+FROM nginx:1.29.8-alpine
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/nginx.conf

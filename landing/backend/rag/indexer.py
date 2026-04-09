@@ -1,12 +1,15 @@
 """
 indexer.py — RAG Index Builder
 
-Loads CV (markdown) and projects (JSON), chunks them semantically,
-generates embeddings with Gemini gemini-embedding-exp-03-07 via google-genai,
-and builds an in-memory cosine-similarity index using NumPy.
+Loads deployed projects (JSON), generates embeddings with Gemini
+gemini-embedding-001 via google-genai, and builds an in-memory
+cosine-similarity index using NumPy.
+
+Only indexes projects.json — the chatbot should only know about
+projects that are actually deployed in the portfolio.
 
 No FAISS, no sentence-transformers, no PyTorch — pure google-genai + NumPy.
-The dataset is small (~15 chunks), so a brute-force NumPy search is instant.
+The dataset is small, so a brute-force NumPy search is instant.
 """
 
 import json
@@ -23,7 +26,7 @@ from google.genai import types
 logger = logging.getLogger(__name__)
 
 # ─── Embedding config ────────────────────────────────────────
-EMBEDDING_MODEL = "gemini-embedding-exp-03-07"
+EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIM = 256  # reduced dimensionality (256 is enough for ~15 chunks)
 
 
@@ -157,10 +160,13 @@ def _embed_texts(client: genai.Client, texts: list[str]) -> np.ndarray:
 
 
 def build_index(data_dir: str = "./data") -> RAGIndex:
-    """Build the complete RAG index from CV and projects data.
+    """Build the RAG index from deployed projects data.
+
+    Only indexes projects.json (deployed projects). The chatbot should only
+    have context about projects that are actually live in the portfolio.
 
     Args:
-        data_dir: Path to the data directory containing cv.md and projects.json.
+        data_dir: Path to the data directory containing projects.json.
 
     Returns:
         RAGIndex with embedding matrix, chunks, and the genai client.
@@ -168,17 +174,7 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
     data_path = Path(data_dir)
     all_chunks: list[Chunk] = []
 
-    # ─── Load CV ──────────────────────────────────────────
-    cv_path = data_path / "cv.md"
-    if cv_path.exists():
-        cv_text = cv_path.read_text(encoding="utf-8")
-        cv_chunks = _chunk_markdown(cv_text, source="cv")
-        all_chunks.extend(cv_chunks)
-        logger.info(f"Loaded CV: {len(cv_chunks)} chunks from {cv_path}")
-    else:
-        logger.warning(f"CV file not found: {cv_path}")
-
-    # ─── Load Projects ────────────────────────────────────
+    # ─── Load Projects (only deployed) ────────────────────
     projects_path = data_path / "projects.json"
     if projects_path.exists():
         with open(projects_path, "r", encoding="utf-8") as f:
@@ -191,7 +187,7 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
 
     if not all_chunks:
         logger.error("No data found to index!")
-        raise ValueError("No data available for indexing. Check data/ directory.")
+        raise ValueError("No data available for indexing. Check data/projects.json.")
 
     # ─── Generate embeddings via Gemini ───────────────────
     api_key = os.getenv("LLM_API_KEY")
