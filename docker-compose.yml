@@ -20,6 +20,7 @@ services:
   # ─── Landing Page (Vue 3 SPA) ──────────────────────
   portfolio-landing:
     build: ./landing/frontend
+    image: ${LANDING_IMAGE:-ghcr.io/triplerush/portfolio_landing:latest}
     container_name: portfolio_landing
     restart: unless-stopped
     networks:
@@ -28,6 +29,7 @@ services:
   # ─── Chatbot Backend (FastAPI + RAG) ────────────────
   portfolio-chatbot:
     build: ./landing/backend
+    image: ${CHATBOT_IMAGE:-ghcr.io/triplerush/portfolio_chatbot:latest}
     container_name: portfolio_chatbot
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
