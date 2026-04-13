@@ -40,8 +40,8 @@ services:
     networks:
       - portfolio-net
 
-# La red se crea automáticamente con nombre explícito.
-# Los subproyectos (auto_profilling, etc.) la referencian como external: true.
+# La red se crea en el deploy script (docker network create portfolio-net).
+# Todos los proyectos la referencian como external: true.
 networks:
   portfolio-net:
-    name: portfolio-net
+    external: true
