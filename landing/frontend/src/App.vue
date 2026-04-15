@@ -64,7 +64,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, provide } from 'vue'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import Lenis from 'lenis'
 import HeroSection from './components/HeroSection.vue'
 import ProjectsGrid from './components/ProjectsGrid.vue'
 import SkillsBadges from './components/SkillsBadges.vue'
@@ -73,10 +76,13 @@ import ContactSection from './components/ContactSection.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import ChatWidget from './components/ChatWidget.vue'
 
+gsap.registerPlugin(ScrollTrigger)
+
 const theme = ref('dark')
 const mobileMenuOpen = ref(false)
 const currentYear = new Date().getFullYear()
 const projects = ref([])
+let lenis = null
 
 const navLinks = [
   { id: 'projects', href: '#projects', label: 'Proyectos' },
@@ -99,6 +105,11 @@ const toggleTheme = () => {
 
 provide('theme', theme)
 
+onBeforeUnmount(() => {
+  lenis?.destroy()
+  ScrollTrigger.getAll().forEach(t => t.kill())
+})
+
 onMounted(async () => {
   const savedTheme = localStorage.getItem('theme') || 'dark'
   theme.value = savedTheme
@@ -114,20 +125,50 @@ onMounted(async () => {
     // Backend unavailable — projects section stays empty
   }
 
-  // Intersection Observer for scroll animations
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible')
-        }
-      })
-    },
-    { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-  )
+  // Lenis smooth scroll
+  lenis = new Lenis({
+    duration: 1.2,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    smoothWheel: true,
+  })
 
-  document.querySelectorAll('.section-animate, .stagger-children').forEach((el) => {
-    observer.observe(el)
+  lenis.on('scroll', ScrollTrigger.update)
+  gsap.ticker.add((time) => lenis.raf(time * 1000))
+  gsap.ticker.lagSmoothing(0)
+
+  // GSAP scroll animations
+  gsap.utils.toArray('.section-animate').forEach((section) => {
+    gsap.fromTo(section,
+      { y: 60, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: section,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+        },
+      }
+    )
+  })
+
+  gsap.utils.toArray('.stagger-children').forEach((container) => {
+    gsap.fromTo(container.children,
+      { y: 40, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.6,
+        stagger: 0.12,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: container,
+          start: 'top 80%',
+        },
+      }
+    )
   })
 })
 </script>

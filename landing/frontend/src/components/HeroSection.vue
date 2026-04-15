@@ -1,13 +1,11 @@
 <template>
   <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-    <!-- Background decoration -->
+    <!-- Background: particles + grid pattern -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute top-1/4 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl animate-float"
-           style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
-      </div>
-      <div class="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full opacity-15 blur-3xl animate-float"
-           style="background: linear-gradient(135deg, var(--color-accent-500), var(--color-brand-400)); animation-delay: 3s;">
-      </div>
+      <vue-particles id="hero-particles"
+                     class="absolute inset-0"
+                     :particlesInit="particlesInit"
+                     :options="particlesOptions" />
       <!-- Grid pattern -->
       <div class="absolute inset-0 opacity-[0.03]"
            style="background-image: radial-gradient(circle, currentColor 1px, transparent 1px); background-size: 40px 40px;">
@@ -38,11 +36,10 @@
         AI Software Engineer
       </p>
 
-      <!-- Tagline -->
+      <!-- Tagline (typewriter) -->
       <p class="animate-fade-in-up text-base sm:text-lg md:text-xl font-light max-w-2xl mx-auto mb-10 opacity-60"
-         style="animation-delay: 0.3s;">
-        Construyendo IA que llega a produccion, conectando ML, DevOps e Ingenieria de IA
-        para crear sistemas inteligentes que escalan.
+         style="animation-delay: 0.3s; min-height: 1.75em;">
+        <span ref="typedElement"></span>
       </p>
 
       <!-- CTA Buttons -->
@@ -88,6 +85,75 @@
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { ref, inject, onMounted, onBeforeUnmount } from 'vue'
+import Typed from 'typed.js'
+import { loadSlim } from '@tsparticles/slim'
+
 const theme = inject('theme')
+const typedElement = ref(null)
+let typedInstance = null
+
+const particlesInit = async (engine) => {
+  await loadSlim(engine)
+}
+
+const particlesOptions = {
+  fullScreen: { enable: false },
+  background: { color: 'transparent' },
+  fpsLimit: 60,
+  particles: {
+    number: { value: 50, density: { enable: true, area: 900 } },
+    color: { value: ['#6366f1', '#a855f7', '#3b82f6'] },
+    shape: { type: 'circle' },
+    opacity: { value: { min: 0.1, max: 0.35 } },
+    size: { value: { min: 1, max: 3 } },
+    move: {
+      enable: true,
+      speed: 0.6,
+      direction: 'none',
+      outModes: 'bounce',
+    },
+    links: {
+      enable: true,
+      distance: 140,
+      color: '#6366f1',
+      opacity: 0.12,
+      width: 1,
+    },
+  },
+  interactivity: {
+    events: {
+      onHover: { enable: true, mode: 'grab' },
+    },
+    modes: {
+      grab: { distance: 160, links: { opacity: 0.25 } },
+    },
+  },
+  detectRetina: true,
+}
+
+onMounted(() => {
+  typedInstance = new Typed(typedElement.value, {
+    strings: [
+      'Construyendo IA que llega a produccion',
+      'Conectando ML, DevOps e Ingenieria de Software',
+      'Sistemas inteligentes que escalan',
+      'RAG, Agentes y MLOps en produccion',
+    ],
+    typeSpeed: 40,
+    backSpeed: 25,
+    backDelay: 2000,
+    loop: true,
+    cursorChar: '|',
+  })
+})
+
+onBeforeUnmount(() => typedInstance?.destroy())
 </script>
+
+<style scoped>
+:deep(.typed-cursor) {
+  color: var(--color-brand-400);
+  font-weight: 300;
+}
+</style>
