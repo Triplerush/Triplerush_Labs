@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, provide } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, provide, watch, nextTick } from 'vue'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
@@ -112,6 +112,28 @@ const toggleTheme = () => {
 }
 
 provide('theme', theme)
+
+// Re-animate stagger-children when projects load (they render after fetch via v-else)
+watch(projects, () => {
+  nextTick(() => {
+    gsap.utils.toArray('.stagger-children').forEach((container) => {
+      gsap.fromTo(container.children,
+        { y: 40, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.6,
+          stagger: 0.12,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: container,
+            start: 'top 80%',
+          },
+        }
+      )
+    })
+  })
+})
 
 onBeforeUnmount(() => {
   lenis?.destroy()
