@@ -12,11 +12,42 @@
         </p>
       </div>
 
+      <!-- Skeleton loading -->
+      <div v-if="projects.length === 0" class="grid gap-6 md:gap-8">
+        <div v-for="n in 2" :key="'skeleton-' + n"
+             class="glass-card rounded-2xl p-6 sm:p-8 animate-pulse">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="h-7 rounded-lg w-3/5"
+                     :class="theme === 'dark' ? 'bg-white/10' : 'bg-black/10'"></div>
+                <div class="h-5 w-14 rounded-full"
+                     :class="theme === 'dark' ? 'bg-white/10' : 'bg-black/10'"></div>
+              </div>
+              <div class="h-4 rounded w-full mb-2"
+                   :class="theme === 'dark' ? 'bg-white/8' : 'bg-black/8'"></div>
+              <div class="h-4 rounded w-4/5"
+                   :class="theme === 'dark' ? 'bg-white/8' : 'bg-black/8'"></div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <div v-for="t in 5" :key="t" class="h-7 w-18 rounded-lg"
+                 :class="theme === 'dark' ? 'bg-white/5' : 'bg-black/5'"></div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div v-for="d in 3" :key="d" class="h-5 w-16 rounded"
+                 :class="theme === 'dark' ? 'bg-white/5' : 'bg-black/5'"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Projects grid -->
-      <div class="grid gap-6 md:gap-8 stagger-children">
+      <div v-else class="grid gap-6 md:gap-8 stagger-children">
         <article v-for="project in projects" :key="project.id"
                  class="glass-card rounded-2xl overflow-hidden group cursor-pointer"
-                 :id="'project-' + project.id">
+                 :id="'project-' + project.id"
+                 @mousemove="handleTilt"
+                 @mouseleave="resetTilt">
           <div class="p-6 sm:p-8">
             <!-- Header -->
             <div class="flex items-start justify-between mb-4">
@@ -113,5 +144,19 @@ const statusClasses = (status) => {
     return 'bg-green-500/15 text-green-400'
   }
   return 'bg-yellow-500/15 text-yellow-400'
+}
+
+function handleTilt(e) {
+  const card = e.currentTarget
+  const rect = card.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  const rotateX = (y - rect.height / 2) / rect.height * -8
+  const rotateY = (x - rect.width / 2) / rect.width * 8
+  card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`
+}
+
+function resetTilt(e) {
+  e.currentTarget.style.transform = ''
 }
 </script>

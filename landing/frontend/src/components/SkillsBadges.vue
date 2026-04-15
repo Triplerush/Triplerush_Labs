@@ -16,7 +16,9 @@
       <div class="grid sm:grid-cols-2 gap-6 stagger-children">
         <div v-for="category in categories" :key="category.name"
              class="glass-card rounded-2xl p-6 sm:p-8"
-             :id="'skills-' + category.id">
+             :id="'skills-' + category.id"
+             @mousemove="handleTilt"
+             @mouseleave="resetTilt">
           <!-- Category header -->
           <div class="flex items-center gap-3 mb-5">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
@@ -49,6 +51,20 @@
 import { inject } from 'vue'
 
 const theme = inject('theme')
+
+function handleTilt(e) {
+  const card = e.currentTarget
+  const rect = card.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  const rotateX = (y - rect.height / 2) / rect.height * -8
+  const rotateY = (x - rect.width / 2) / rect.width * 8
+  card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`
+}
+
+function resetTilt(e) {
+  e.currentTarget.style.transform = ''
+}
 
 const categories = [
   {

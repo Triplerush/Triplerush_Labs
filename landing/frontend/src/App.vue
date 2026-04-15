@@ -47,6 +47,9 @@
       <ProjectsGrid :projects="projects" />
       <SkillsBadges />
       <AboutMe />
+      <div id="terminal-section">
+        <TerminalSection />
+      </div>
       <ContactSection />
     </main>
 
@@ -60,6 +63,9 @@
 
     <!-- Chat Widget (Fase 3 — AI Chatbot) -->
     <ChatWidget />
+
+    <!-- Custom cursor (desktop only) -->
+    <CustomCursor />
   </div>
 </template>
 
@@ -75,6 +81,8 @@ import AboutMe from './components/AboutMe.vue'
 import ContactSection from './components/ContactSection.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import ChatWidget from './components/ChatWidget.vue'
+import TerminalSection from './components/TerminalSection.vue'
+import CustomCursor from './components/CustomCursor.vue'
 
 gsap.registerPlugin(ScrollTrigger)
 
