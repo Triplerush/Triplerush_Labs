@@ -1,32 +1,26 @@
 services:
-  # ─── Nginx Global ───────────────────────────────────
-  # Puerto configurable via NGINX_PORT:
-  #   - Producción (VPS): NGINX_PORT no definido → usa 80 (default)
-  #   - Local: NGINX_PORT=3080 en .env → usa 3080
-  nginx-global:
-    image: nginx:1.29.8-alpine
-    container_name: nginx_global
-    ports:
-      - "${NGINX_PORT:-80}:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    restart: unless-stopped
-    depends_on:
-      - portfolio-landing
-      - portfolio-chatbot
-    networks:
-      - portfolio-net
-
   # ─── Landing Page (Vue 3 SPA) ──────────────────────
+  # Escucha interno en :4000 (nginx del contenedor frontend).
+  # En prod: NPM reenvia triplerush.tech/ a portfolio_landing:4000
+  #   via portfolio-net.
+  # En local: mapeo 4000:4000 permite abrir http://localhost:4000/
+  #   sin sudo ni choque con :80.
   portfolio-landing:
     build: ./landing/frontend
     image: ${LANDING_IMAGE:-ghcr.io/triplerush/portfolio_landing:latest}
     container_name: portfolio_landing
     restart: unless-stopped
+    ports:
+      - "4000:4000"
     networks:
       - portfolio-net
 
   # ─── Chatbot Backend (FastAPI + RAG) ────────────────
+  # Escucha interno en :8080 (uvicorn).
+  # En prod: NPM reenvia /v1/* y /health a portfolio_chatbot:8080
+  #   via portfolio-net.
+  # En local: mapeo 8080:8080 para golpear la API directamente
+  #   (ej. curl http://localhost:8080/health).
   portfolio-chatbot:
     build: ./landing/backend
     image: ${CHATBOT_IMAGE:-ghcr.io/triplerush/portfolio_chatbot:latest}
@@ -36,12 +30,14 @@ services:
       - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash-lite}
     volumes:
       - ./landing/backend/data:/app/data
+    ports:
+      - "8080:8080"
     restart: unless-stopped
     networks:
       - portfolio-net
 
-# La red se crea en el deploy script (docker network create portfolio-net).
-# Todos los proyectos la referencian como external: true.
+# Red creada por el compose de NPM en el Droplet.
+# Todos los proyectos se conectan como external: true.
 networks:
   portfolio-net:
     external: true

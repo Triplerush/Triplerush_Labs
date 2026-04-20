@@ -67,9 +67,8 @@ jobs:
             TMPDIR=$(mktemp -d)
             git clone --depth 1 "$REPO_URL" "$TMPDIR"
 
-            # Copiar archivos de orquestacion
+            # Copiar archivos de orquestacion (ya no se copia nginx.conf: lo maneja NPM)
             cp "$TMPDIR/docker-compose.yml" "$DEPLOY_DIR/"
-            cp "$TMPDIR/nginx.conf" "$DEPLOY_DIR/"
 
             # Copiar datos del chatbot (RAG knowledge base)
             mkdir -p "$DEPLOY_DIR/landing/backend/data"
@@ -85,11 +84,17 @@ jobs:
             # Crear .env con secrets (no se sube a git)
             echo "LLM_API_KEY=${{ secrets.LLM_API_KEY }}" > "$DEPLOY_DIR/.env"
 
-            # Crear red portfolio-net (compartida con subproyectos)
+            # Asegurar red portfolio-net (la crea NPM; este comando es idempotente)
             docker network create portfolio-net 2>/dev/null || true
+
+            # Limpiar contenedor legacy nginx_global si aun existe (NPM lo reemplaza)
+            docker rm -f nginx_global 2>/dev/null || true
 
             # Navegar al directorio de deploy
             cd "$DEPLOY_DIR"
+
+            # Eliminar nginx.conf legacy si existe en el deploy dir
+            rm -f nginx.conf
 
             # Configurar imagenes
             export LANDING_IMAGE="${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/portfolio_landing:latest"

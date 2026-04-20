@@ -58,8 +58,10 @@
 
         <!-- Messages -->
         <div ref="messagesContainer"
+             data-lenis-prevent
              class="flex-1 overflow-y-auto px-4 py-4 space-y-4 chat-messages-scroll"
-             :class="theme === 'dark' ? 'chat-scroll-dark' : 'chat-scroll-light'">
+             :class="theme === 'dark' ? 'chat-scroll-dark' : 'chat-scroll-light'"
+             @wheel.stop>
 
           <!-- Welcome message (always first) -->
           <div class="flex gap-3" v-if="messages.length === 0">
@@ -77,27 +79,48 @@
           </div>
 
           <!-- Chat messages -->
-          <div v-for="(msg, i) in messages" :key="i"
-               class="flex gap-3"
-               :class="msg.role === 'user' ? 'justify-end' : ''">
+          <template v-for="(msg, i) in messages" :key="i">
+            <div class="flex gap-3"
+                 :class="msg.role === 'user' ? 'justify-end' : ''">
 
-            <!-- Assistant avatar -->
-            <div v-if="msg.role === 'assistant'"
-                 class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-1"
-                 style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
-              AI
+              <!-- Assistant avatar -->
+              <div v-if="msg.role === 'assistant'"
+                   class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-1 chat-avatar"
+                   style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
+                AI
+              </div>
+
+              <!-- Message bubble -->
+              <div class="chat-bubble rounded-2xl px-4 py-3 text-sm max-w-[85%] leading-relaxed"
+                   :class="[
+                     msg.role === 'user'
+                       ? 'chat-bubble-user rounded-tr-md text-white'
+                       : ['rounded-tl-md chat-bubble-assistant', theme === 'dark' ? 'chat-bubble-assistant-dark' : 'chat-bubble-assistant-light']
+                   ]"
+                   v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : escapeHtml(msg.content)">
+              </div>
             </div>
 
-            <!-- Message bubble -->
-            <div class="rounded-2xl px-4 py-3 text-sm max-w-[85%] leading-relaxed"
-                 :class="msg.role === 'user'
-                   ? 'rounded-tr-md text-white bg-gradient-to-br from-brand-500 to-accent-500'
-                   : theme === 'dark'
-                     ? 'rounded-tl-md bg-surface-800 text-white/90'
-                     : 'rounded-tl-md bg-gray-100 text-gray-800'"
-                 v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : escapeHtml(msg.content)">
+            <!-- Project chips (below assistant messages that mention projects) -->
+            <div v-if="msg.role === 'assistant' && msg.content"
+                 class="flex flex-wrap gap-2 pl-10"
+                 :class="mentionedProjects(msg.content).length ? '' : 'hidden'">
+              <button v-for="proj in mentionedProjects(msg.content)" :key="proj.id"
+                      @click="openProject(proj)"
+                      class="chat-project-chip group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer"
+                      :class="theme === 'dark'
+                        ? 'bg-surface-800/80 border border-brand-500/30 text-white/90 hover:bg-brand-500/15 hover:border-brand-400/60'
+                        : 'bg-white border border-brand-500/30 text-gray-700 hover:bg-brand-50 hover:border-brand-500/60'">
+                <svg class="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0l-4-4m4 4l-4 4" />
+                </svg>
+                <span>{{ proj.name }}</span>
+                <span v-if="proj.status === 'wip'" class="ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full opacity-70"
+                      :class="theme === 'dark' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-700'">WIP</span>
+              </button>
             </div>
-          </div>
+          </template>
 
           <!-- Thinking indicator -->
           <div v-if="isThinking" class="flex gap-3">
@@ -204,6 +227,7 @@ import { ref, inject, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 // ─── State ───────────────────────────────────────────────
 const theme = inject('theme', ref('dark'))
+const projects = inject('projects', ref([]))
 const isOpen = ref(false)
 const showWelcome = ref(true)
 const isThinking = ref(false)
@@ -441,8 +465,23 @@ function renderMarkdown(text) {
   // Inline code: `...`
   html = html.replace(/`([^`]+)`/g, '<code class="chat-inline-code">$1</code>')
 
+  // Markdown links: [text](url) — render as styled pill
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g,
+    (_, label, url) => {
+      const isExternal = /^https?:\/\//.test(url)
+      const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+      const icon = isExternal
+        ? '<svg class="chat-link-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>'
+        : '<svg class="chat-link-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>'
+      return `<a href="${url}" class="chat-link"${target}>${label}${icon}</a>`
+    })
+
+  // Headings: ## Title and ### Title
+  html = html.replace(/^### (.+)$/gm, '<h4 class="chat-heading chat-heading-sm">$1</h4>')
+  html = html.replace(/^## (.+)$/gm, '<h3 class="chat-heading chat-heading-md">$1</h3>')
+
   // Bold: **...**
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="chat-strong">$1</strong>')
 
   // Italic: *...*
   html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
@@ -451,10 +490,53 @@ function renderMarkdown(text) {
   html = html.replace(/^- (.+)$/gm, '<li class="chat-list-item">$1</li>')
   html = html.replace(/(<li class="chat-list-item">.*<\/li>\n?)+/g, '<ul class="chat-list">$&</ul>')
 
-  // Line breaks
+  // Double newline → paragraph break (visual spacing)
+  html = html.replace(/\n{2,}/g, '</p><p class="chat-paragraph">')
+  html = `<p class="chat-paragraph">${html}</p>`
+
+  // Single newline → <br>
   html = html.replace(/\n/g, '<br>')
 
+  // Cleanup: empty paragraphs and paragraph wrapping block elements
+  html = html.replace(/<p class="chat-paragraph">\s*<\/p>/g, '')
+  html = html.replace(/<p class="chat-paragraph">(\s*<(?:ul|pre|h3|h4)[^>]*>)/g, '$1')
+  html = html.replace(/(<\/(?:ul|pre|h3|h4)>)(\s*)<\/p>/g, '$1$2')
+
   return html
+}
+
+// ─── Project linking ─────────────────────────────────────
+// Detects project mentions (by name or id) in assistant output
+// and shows clickable chips below the message.
+function mentionedProjects(content) {
+  if (!content || !projects.value?.length) return []
+  const lower = content.toLowerCase()
+  const seen = new Set()
+  const found = []
+  for (const p of projects.value) {
+    if (seen.has(p.id)) continue
+    const needles = [p.id, p.name].filter(Boolean).map(s => s.toLowerCase())
+    if (needles.some(n => n.length > 2 && lower.includes(n))) {
+      found.push(p)
+      seen.add(p.id)
+    }
+  }
+  return found
+}
+
+function openProject(project) {
+  if (!project) return
+  const url = project.url
+  if (!url) {
+    document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+    return
+  }
+  if (/^https?:\/\//.test(url)) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } else {
+    // Internal path — navigate so NPM routes to the sub-project
+    window.location.assign(url)
+  }
 }
 </script>
 
@@ -549,6 +631,56 @@ function renderMarkdown(text) {
 textarea {
   field-sizing: content;
 }
+
+/* ─── Message bubbles ───────────────────────────────────── */
+.chat-bubble {
+  position: relative;
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.chat-bubble:hover {
+  box-shadow: 0 4px 14px oklch(0 0 0 / 0.18);
+}
+
+.chat-bubble-user {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
+  box-shadow: 0 4px 14px oklch(0.55 0.20 290 / 0.25);
+}
+
+.chat-bubble-assistant-dark {
+  background: linear-gradient(180deg, oklch(0.22 0.02 250), oklch(0.19 0.02 250));
+  color: oklch(0.95 0 0 / 0.92);
+  border: 1px solid oklch(1 0 0 / 0.06);
+}
+
+.chat-bubble-assistant-light {
+  background: linear-gradient(180deg, oklch(0.98 0.005 250), oklch(0.96 0.005 250));
+  color: oklch(0.28 0.02 250);
+  border: 1px solid oklch(0 0 0 / 0.05);
+}
+
+.chat-avatar {
+  box-shadow: 0 2px 10px oklch(0.55 0.20 290 / 0.35);
+}
+
+/* ─── Project chips (clickable project references) ──────── */
+.chat-project-chip {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.08);
+}
+
+.chat-project-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(0.55 0.20 290 / 0.2);
+}
+
+.chat-project-chip:active {
+  transform: translateY(0);
+}
 </style>
 
 <style>
@@ -605,4 +737,85 @@ textarea {
   color: var(--color-brand-400);
   font-weight: bold;
 }
+
+/* ─── Paragraphs ───────────────────────────────────────── */
+.chat-paragraph {
+  margin: 0;
+}
+.chat-paragraph + .chat-paragraph,
+.chat-paragraph + .chat-list,
+.chat-list + .chat-paragraph,
+.chat-paragraph + .chat-heading,
+.chat-heading + .chat-paragraph {
+  margin-top: 0.55rem;
+}
+
+/* ─── Headings ─────────────────────────────────────────── */
+.chat-heading {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.6rem 0 0.3rem 0;
+  background: linear-gradient(135deg, var(--color-brand-400), var(--color-accent-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.chat-heading-md { font-size: 0.95rem; }
+.chat-heading-sm { font-size: 0.88rem; }
+
+/* ─── Strong (bold) ────────────────────────────────────── */
+.chat-strong {
+  font-weight: 600;
+  color: inherit;
+}
+
+/* ─── Markdown links as pills ──────────────────────────── */
+.chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.55rem;
+  margin: 0 0.1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  text-decoration: none;
+  background: linear-gradient(135deg,
+    oklch(0.55 0.20 250 / 0.18),
+    oklch(0.55 0.20 290 / 0.18));
+  color: var(--color-brand-300);
+  border: 1px solid oklch(0.55 0.20 270 / 0.35);
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.chat-link:hover {
+  background: linear-gradient(135deg,
+    oklch(0.55 0.20 250 / 0.30),
+    oklch(0.55 0.20 290 / 0.30));
+  border-color: oklch(0.60 0.22 270 / 0.65);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px oklch(0.55 0.20 270 / 0.25);
+}
+
+.light .chat-link {
+  color: var(--color-brand-600);
+  background: linear-gradient(135deg,
+    oklch(0.55 0.20 250 / 0.10),
+    oklch(0.55 0.20 290 / 0.10));
+}
+
+.chat-link-icon {
+  width: 0.85em;
+  height: 0.85em;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.chat-link:hover .chat-link-icon {
+  opacity: 1;
+}
+
+/* Bubbles contain block-level elements — tighten last-child margins */
+.chat-bubble > *:first-child { margin-top: 0 !important; }
+.chat-bubble > *:last-child  { margin-bottom: 0 !important; }
 </style>

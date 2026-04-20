@@ -112,6 +112,7 @@ const toggleTheme = () => {
 }
 
 provide('theme', theme)
+provide('projects', projects)
 
 // Re-animate stagger-children when projects load (they render after fetch via v-else)
 watch(projects, () => {
