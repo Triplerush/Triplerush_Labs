@@ -3,6 +3,7 @@ Portfolio Chatbot Backend — FastAPI
 
 Endpoints:
   GET  /health   → Health check
+  POST /v1/match → Raw semantic scores for constellation nodes
   POST /v1/chat  → Chatbot RAG endpoint with SSE streaming
 
 Architecture reference: GUIA_PORTFOLIO_ORQUESTADOR.md → "Arquitectura del Chatbot"
@@ -26,6 +27,7 @@ import datetime
 
 from rag.indexer import build_index, RAGIndex
 from rag.agent import generate_response
+from rag.retriever import match_nodes
 
 # ─── Logging ──────────────────────────────────────────────────
 logging.basicConfig(
@@ -37,23 +39,29 @@ logger = logging.getLogger(__name__)
 
 # ─── Rate Limiting ────────────────────────────────────────────
 RATE_LIMIT_MAX = 20  # max messages per window
+MATCH_RATE_LIMIT_MAX = 60  # max match queries per window
 RATE_LIMIT_WINDOW = 60  # seconds
 
-# In-memory rate limiter: {ip: [timestamp1, timestamp2, ...]}
+# In-memory rate limiter: {bucket:ip: [timestamp1, timestamp2, ...]}
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 
 
-def _check_rate_limit(client_ip: str) -> bool:
+def _check_rate_limit(
+    client_ip: str,
+    max_requests: int = RATE_LIMIT_MAX,
+    bucket: str = "chat",
+) -> bool:
     """Check if a client IP has exceeded the rate limit.
 
     Returns True if the request is allowed, False if rate-limited.
     """
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
+    store_key = f"{bucket}:{client_ip}"
 
     # Clean old entries for this IP
-    _rate_limit_store[client_ip] = [
-        ts for ts in _rate_limit_store[client_ip]
+    _rate_limit_store[store_key] = [
+        ts for ts in _rate_limit_store[store_key]
         if ts > window_start
     ]
 
@@ -66,10 +74,10 @@ def _check_rate_limit(client_ip: str) -> bool:
         for ip in stale_ips:
             del _rate_limit_store[ip]
 
-    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
+    if len(_rate_limit_store[store_key]) >= max_requests:
         return False
 
-    _rate_limit_store[client_ip].append(now)
+    _rate_limit_store[store_key].append(now)
     return True
 
 
@@ -134,6 +142,10 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list, max_length=10)
 
 
+class MatchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+
+
 # ─── Endpoints ────────────────────────────────────────────────
 @app.get("/health")
 async def health_check():
@@ -155,6 +167,55 @@ async def get_projects():
     with open(projects_path, "r", encoding="utf-8") as f:
         projects = json.load(f)
     return JSONResponse(content=projects)
+
+
+@app.post("/v1/match")
+async def match(request: Request, body: MatchRequest):
+    """Return all constellation nodes with raw semantic match scores.
+
+    Central anchors (for example Fernando's persona node) are returned with
+    score=null and do not compete in semantic scoring.
+    """
+    client_ip = request.headers.get("X-Real-IP", request.client.host)
+
+    if not _check_rate_limit(
+        client_ip,
+        max_requests=MATCH_RATE_LIMIT_MAX,
+        bucket="match",
+    ):
+        logger.warning(f"Match rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "Rate limit exceeded",
+                "message": f"Máximo {MATCH_RATE_LIMIT_MAX} búsquedas por minuto. "
+                           "Espera un momento e intenta de nuevo.",
+            },
+        )
+
+    query = _sanitize_message(body.query)
+    if not query:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Empty query", "message": "La búsqueda no puede estar vacía."},
+        )
+
+    if rag_index is None:
+        logger.error("RAG index not available for match endpoint")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "RAG index unavailable",
+                "message": "El índice semántico está iniciándose. Intenta de nuevo en unos segundos.",
+            },
+        )
+
+    results = match_nodes(query=query, rag_index=rag_index)
+    logger.info(
+        f"Match query: '{query[:80]}...' | "
+        f"Returned {len(results)} nodes"
+    )
+    return JSONResponse(content=results)
 
 
 @app.post("/v1/chat")

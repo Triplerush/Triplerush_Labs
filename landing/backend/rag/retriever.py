@@ -7,13 +7,12 @@ Embeddings are generated via Gemini gemini-embedding-001.
 """
 
 import logging
-import os
 
 import numpy as np
 from google import genai
 from google.genai import types
 
-from rag.indexer import RAGIndex, Chunk, EMBEDDING_MODEL, EMBEDDING_DIM
+from rag.indexer import RAGIndex, Chunk, Node, EMBEDDING_MODEL, EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +89,54 @@ def retrieve(
     return results
 
 
+def _node_response(node: Node, score: float | None) -> dict:
+    """Serialize a normalized node with its optional match score."""
+    return {
+        "id": node.id,
+        "type": node.type,
+        "name": node.name,
+        "category": node.category,
+        "is_central": node.is_central,
+        "score": score,
+        "data": node.data,
+    }
+
+
+def central_anchors(rag_index: RAGIndex) -> list[dict]:
+    """Return central nodes as anchors with null score."""
+    return [
+        _node_response(node, None)
+        for node in rag_index.nodes
+        if node.is_central
+    ]
+
+
+def match_nodes(query: str, rag_index: RAGIndex) -> list[dict]:
+    """Return all constellation nodes with semantic scores.
+
+    Non-central nodes are sorted by cosine similarity descending. Central
+    anchors are included with score=None and are not embedded or scored.
+    """
+    query_vector = _embed_query(rag_index.client, query)
+    scores = rag_index.embeddings @ query_vector
+
+    node_by_id = {node.id: node for node in rag_index.nodes}
+    matches = []
+
+    sorted_indices = np.argsort(scores)[::-1]
+    for idx in sorted_indices:
+        chunk: Chunk = rag_index.chunks[idx]
+        node_id = chunk.metadata.get("id")
+        node = node_by_id.get(node_id)
+        if node is None:
+            continue
+
+        matches.append(_node_response(node, float(scores[idx])))
+
+    matches.extend(central_anchors(rag_index))
+    return matches
+
+
 def format_context(results: list[dict]) -> str:
     """Format retrieved chunks into a context string for the LLM prompt.
 
@@ -104,7 +151,14 @@ def format_context(results: list[dict]) -> str:
 
     context_parts = []
     for i, result in enumerate(results, 1):
-        source_label = "CV" if result["source"] == "cv" else "Proyecto"
+        source_label = {
+            "cv": "CV",
+            "project": "Proyecto",
+            "experience": "Experiencia",
+            "experience-bundle": "Experiencia",
+            "education-bundle": "Educación",
+            "person": "Perfil",
+        }.get(result["source"], "Portfolio")
         context_parts.append(
             f"[Fuente {i}: {source_label} — {result['section']}]\n"
             f"{result['text']}\n"

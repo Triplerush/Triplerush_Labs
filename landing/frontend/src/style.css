@@ -24,6 +24,12 @@
   --color-accent-500: oklch(0.60 0.25 300);
   --color-accent-600: oklch(0.50 0.25 300);
 
+  /* Constellation tokens */
+  --color-infra-500: oklch(0.70 0.15 200);
+  --color-frontend-500: oklch(0.70 0.18 50);
+  --color-glow-active: oklch(0.65 0.20 250 / 0.6);
+  --color-edge-faint: oklch(1 0 0 / 0.08);
+
   /* Surface colors for dark mode */
   --color-surface-900: oklch(0.13 0.02 250);
   --color-surface-800: oklch(0.17 0.02 250);

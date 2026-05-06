@@ -35,3 +35,6 @@ Thumbs.db
 npm-debug.log*
 
 docs/
+
+docker-compose.local.yml
+nginx.local.conf

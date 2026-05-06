@@ -1,5 +1,10 @@
 <template>
   <div :class="theme" class="min-h-screen transition-colors duration-300">
+    <ConstellationHero
+      :open="constellationOpen"
+      @close="constellationOpen = false"
+    />
+
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl transition-all duration-300"
          :class="navClasses">
@@ -83,11 +88,13 @@ import ThemeToggle from './components/ThemeToggle.vue'
 import ChatWidget from './components/ChatWidget.vue'
 import TerminalSection from './components/TerminalSection.vue'
 import CustomCursor from './components/CustomCursor.vue'
+import ConstellationHero from './components/ConstellationHero.vue'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const theme = ref('dark')
 const mobileMenuOpen = ref(false)
+const constellationOpen = ref(true)
 const currentYear = new Date().getFullYear()
 const projects = ref([])
 let lenis = null
@@ -114,6 +121,10 @@ const toggleTheme = () => {
 provide('theme', theme)
 provide('projects', projects)
 
+watch(constellationOpen, (isOpen) => {
+  document.body.style.overflow = isOpen ? 'hidden' : ''
+}, { immediate: true })
+
 // Re-animate stagger-children when projects load (they render after fetch via v-else)
 watch(projects, () => {
   nextTick(() => {
@@ -139,6 +150,7 @@ watch(projects, () => {
 onBeforeUnmount(() => {
   lenis?.destroy()
   ScrollTrigger.getAll().forEach(t => t.kill())
+  document.body.style.overflow = ''
 })
 
 onMounted(async () => {
