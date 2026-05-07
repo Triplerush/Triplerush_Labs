@@ -30,6 +30,30 @@
   --color-glow-active: oklch(0.65 0.20 250 / 0.6);
   --color-edge-faint: oklch(1 0 0 / 0.08);
 
+  /* Phase 4 interaction tokens */
+  --constellation-force-alpha-hover: 0.24;
+  --constellation-force-alpha-search: 0.55;
+  --constellation-force-settle-ms: 500ms;
+  --constellation-node-drag-scale: 1.08;
+  --constellation-node-drag-opacity: 1;
+  --constellation-node-drag-shadow: 0 0 48px oklch(0.65 0.20 250 / 0.72);
+  --constellation-edge-opacity-rest: 0.10;
+  --constellation-edge-opacity-hover: 0.48;
+  --constellation-edge-opacity-active: 0.62;
+  --constellation-edge-width-rest: 1px;
+  --constellation-edge-width-hover: 1.8px;
+  --constellation-edge-width-active: 2.2px;
+  --constellation-trail-size: 4px;
+  --constellation-trail-opacity: 0.18;
+  --constellation-trail-duration: 420ms;
+  --constellation-trail-blur: 2px;
+  --constellation-boundary-padding-desktop: 72px;
+  --constellation-boundary-padding-mobile: 48px;
+  --constellation-motion-fast: 160ms;
+  --constellation-motion-base: 280ms;
+  --constellation-motion-slow: 500ms;
+  --constellation-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
   /* Surface colors for dark mode */
   --color-surface-900: oklch(0.13 0.02 250);
   --color-surface-800: oklch(0.17 0.02 250);

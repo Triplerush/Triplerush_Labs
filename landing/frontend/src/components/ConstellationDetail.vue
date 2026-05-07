@@ -20,11 +20,25 @@
         Coincidencia semántica <strong>{{ scoreLabel }}</strong>
       </div>
 
+      <dl v-if="metadataEntries.length" class="constellation-detail__metadata" aria-label="Datos principales">
+        <template v-for="[key, value] in metadataEntries" :key="key">
+          <dt>{{ key }}</dt>
+          <dd>{{ value }}</dd>
+        </template>
+      </dl>
+
       <section v-if="highlights.length" class="constellation-detail__section">
-        <h3>Highlights</h3>
+        <h3>Detalle completo</h3>
         <ul>
           <li v-for="item in highlights" :key="item">{{ item }}</li>
         </ul>
+      </section>
+
+      <section v-if="demonstrates.length" class="constellation-detail__section">
+        <h3>Demuestra</h3>
+        <div class="constellation-detail__stack">
+          <span v-for="item in demonstrates" :key="item">{{ item }}</span>
+        </div>
       </section>
 
       <section v-if="stack.length" class="constellation-detail__section">
@@ -74,9 +88,25 @@ const eyebrow = computed(() => {
 
 const summary = computed(() => props.node.data?.summary || props.node.data?.description || 'Detalle de la constelación semántica.')
 const highlights = computed(() => props.node.data?.highlights || [])
-const stack = computed(() => props.node.data?.stack || props.node.data?.demonstrates || [])
+const stack = computed(() => props.node.data?.stack || [])
+const demonstrates = computed(() => props.node.data?.demonstrates || [])
 const scoreLabel = computed(() => typeof props.node.score === 'number' ? props.node.score.toFixed(2) : '')
 const contactEntries = computed(() => Object.entries(props.node.data?.contact || {}))
+
+const metadataEntries = computed(() => {
+  const data = props.node.data || {}
+  const entries = []
+
+  if (props.node.type) entries.push(['Tipo', eyebrow.value])
+  if (props.node.category) entries.push(['Categoría', props.node.category])
+  if (data.role) entries.push(['Rol', data.role])
+  if (data.company) entries.push(['Empresa', data.company])
+  if (data.period) entries.push(['Periodo', data.period])
+  if (data.status) entries.push(['Estado', data.status.toUpperCase()])
+  if (data.location) entries.push(['Ubicación', data.location])
+
+  return entries
+})
 
 onMounted(async () => {
   await nextTick()
@@ -107,8 +137,8 @@ onMounted(async () => {
 
 .constellation-detail__panel {
   position: relative;
-  width: min(680px, 100%);
-  max-height: min(760px, calc(100vh - 36px));
+  width: min(920px, 100%);
+  max-height: calc(100dvh - 36px);
   overflow: auto;
   border: 1px solid oklch(1 0 0 / 0.12);
   border-radius: 18px;
@@ -116,6 +146,8 @@ onMounted(async () => {
   box-shadow: 0 30px 120px oklch(0 0 0 / 0.46);
   color: oklch(0.94 0.01 250);
   padding: 26px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .constellation-detail__panel:focus {
@@ -188,6 +220,28 @@ onMounted(async () => {
   font-size: 13px;
 }
 
+.constellation-detail__metadata {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 14px;
+  margin: 20px 0 0;
+  padding: 14px;
+  border: 1px solid oklch(1 0 0 / 0.08);
+  border-radius: 14px;
+  background: oklch(1 0 0 / 0.04);
+  font-size: 13px;
+}
+
+.constellation-detail__metadata dt {
+  color: oklch(0.90 0.01 250 / 0.55);
+  font-weight: 800;
+}
+
+.constellation-detail__metadata dd {
+  margin: 0;
+  color: oklch(0.92 0.01 250 / 0.86);
+}
+
 .constellation-detail__section {
   margin-top: 24px;
 }
@@ -249,5 +303,25 @@ onMounted(async () => {
   color: white;
   font-weight: 800;
   text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .constellation-detail {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .constellation-detail__panel {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+    padding: 20px;
+    border-radius: 18px 18px 10px 10px;
+  }
+
+  .constellation-detail__header,
+  .constellation-detail__metadata,
+  .constellation-detail__contact {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

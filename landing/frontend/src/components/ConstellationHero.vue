@@ -37,15 +37,27 @@
       {{ errorMessage }}
     </p>
 
-    <div class="constellation-hero__stage" role="group" aria-label="Constelación semántica del portfolio">
+    <div ref="stageRef" class="constellation-hero__stage" role="group" aria-label="Constelación semántica del portfolio">
       <svg class="constellation-hero__edges" aria-hidden="true">
+        <circle
+          v-for="point in trailPoints"
+          :key="point.id"
+          class="constellation-hero__trail"
+          r="2"
+          :cx="`${point.x}%`"
+          :cy="`${point.y}%`"
+          :style="{ '--trail-color': point.color, '--trail-opacity-factor': point.opacity }"
+        />
         <line
           v-for="node in nonCentralNodes"
           :key="`edge-${node.id}`"
+          class="constellation-hero__edge"
+          :class="{ 'constellation-hero__edge--active': hoveredNodeId === node.id || activeNodeId === node.id }"
           :x1="`${positionMap[node.id]?.x || 50}%`"
           :y1="`${positionMap[node.id]?.y || 50}%`"
           :x2="`${centralPosition.x}%`"
           :y2="`${centralPosition.y}%`"
+          :style="{ '--edge-strength': edgeStrength(node) }"
         />
       </svg>
 
@@ -56,8 +68,14 @@
         :position="positionMap[node.id] || centralPosition"
         :visual="visualMap[node.id]"
         :reduced-motion="reducedMotion"
-        :tabindex="index + 1"
+        :agitated="node.is_central && isCentralAgitated"
+        :tabindex="0"
         @select="handleExpandNode"
+        @node-hover="hoveredNodeId = node.id"
+        @node-leave="hoveredNodeId = ''"
+        @node-drag-start="startDrag"
+        @node-drag="drag"
+        @node-drag-end="endDrag"
       />
     </div>
 
@@ -78,6 +96,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { gsap } from 'gsap'
 import { useConstellation } from '../composables/useConstellation'
+import { useConstellationPhysics } from '../composables/useConstellationPhysics'
 import ConstellationDetail from './ConstellationDetail.vue'
 import ConstellationNode from './ConstellationNode.vue'
 import ConstellationSearch from './ConstellationSearch.vue'
@@ -104,8 +123,20 @@ const {
 
 const reducedMotion = ref(false)
 const activeNodeId = ref('')
+const hoveredNodeId = ref('')
 const heroRef = ref(null)
-const centralPosition = { x: 50, y: 48 }
+const stageRef = ref(null)
+const stageSize = ref({ width: 1120, height: 430 })
+
+const {
+  centralPosition,
+  positionMap,
+  trailPoints,
+  isCentralAgitated,
+  startDrag,
+  drag,
+  endDrag,
+} = useConstellationPhysics({ nodes, stageSize, reducedMotion })
 
 const colorByCategory = {
   person: 'var(--color-brand-500)',
@@ -120,42 +151,6 @@ const nonCentralNodes = computed(() => nodes.value.filter((node) => !node.is_cen
 const tabOrderedNodes = computed(() => {
   if (status.value === 'results' || status.value === 'expanded') return rankedNodes.value
   return nodes.value
-})
-
-const positionMap = computed(() => {
-  const map = {}
-  const orbitNodes = [...nonCentralNodes.value].sort((a, b) => {
-    if (typeof a.score === 'number' || typeof b.score === 'number') return (b.score ?? -1) - (a.score ?? -1)
-    return a.name.localeCompare(b.name)
-  })
-
-  nodes.value.forEach((node) => {
-    if (node.is_central) map[node.id] = centralPosition
-  })
-
-  const idlePositions = [
-    { x: 26, y: 38 },
-    { x: 74, y: 38 },
-    { x: 50, y: 76 },
-    { x: 20, y: 68 },
-    { x: 80, y: 68 },
-  ]
-
-  orbitNodes.forEach((node, index) => {
-    if (typeof node.score !== 'number') {
-      map[node.id] = idlePositions[index % idlePositions.length]
-      return
-    }
-
-    const angle = (-90 + index * (360 / Math.max(orbitNodes.length, 1))) * (Math.PI / 180)
-    const radius = node.score > 0.7 ? 17 : node.score >= 0.4 ? 25 : 34
-    map[node.id] = {
-      x: 50 + Math.cos(angle) * radius,
-      y: 50 + Math.sin(angle) * radius * 0.72,
-    }
-  })
-
-  return map
 })
 
 const visualMap = computed(() => {
@@ -197,13 +192,24 @@ const visualMap = computed(() => {
   return map
 })
 
+const edgeStrength = (node) => {
+  if (hoveredNodeId.value === node.id || activeNodeId.value === node.id) return 1
+  if (typeof node.score !== 'number') return 0.36
+  return Math.max(0.18, Math.min(0.9, node.score))
+}
+
 const closeConstellation = () => {
   emit('close')
 }
 
 const getFocusableElements = () => {
   if (!heroRef.value) return []
-  return [...heroRef.value.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])')]
+  const focusScope = selectedNode.value
+    ? heroRef.value.querySelector('.constellation-detail')
+    : heroRef.value
+  if (!focusScope) return []
+
+  return [...focusScope.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])')]
     .filter((element) => element !== heroRef.value && !element.disabled && element.offsetParent !== null)
 }
 
@@ -224,11 +230,22 @@ const handleKeydown = (event) => {
 
   const first = focusableElements[0]
   const last = focusableElements[focusableElements.length - 1]
+  const activeElement = document.activeElement
 
-  if (event.shiftKey && document.activeElement === first) {
+  if (selectedNode.value && !focusableElements.includes(activeElement)) {
+    event.preventDefault()
+    if (event.shiftKey) {
+      last.focus()
+    } else {
+      first.focus()
+    }
+    return
+  }
+
+  if (event.shiftKey && activeElement === first) {
     event.preventDefault()
     last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
+  } else if (!event.shiftKey && activeElement === last) {
     event.preventDefault()
     first.focus()
   }
@@ -249,9 +266,19 @@ const handleCloseDetail = () => {
 let mediaQuery = null
 let introContext = null
 let previousActiveElement = null
+let resizeObserver = null
 
 const handleMotionChange = (event) => {
   reducedMotion.value = event.matches
+}
+
+const updateStageSize = () => {
+  if (!stageRef.value) return
+  const rect = stageRef.value.getBoundingClientRect()
+  stageSize.value = {
+    width: Math.max(320, rect.width),
+    height: Math.max(360, rect.height),
+  }
 }
 
 onMounted(() => {
@@ -259,6 +286,10 @@ onMounted(() => {
   mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotion.value = mediaQuery.matches
   mediaQuery.addEventListener?.('change', handleMotionChange)
+  updateStageSize()
+
+  resizeObserver = new ResizeObserver(updateStageSize)
+  if (stageRef.value) resizeObserver.observe(stageRef.value)
 
   if (!reducedMotion.value) {
     introContext = gsap.context(() => {
@@ -273,6 +304,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   mediaQuery?.removeEventListener?.('change', handleMotionChange)
+  resizeObserver?.disconnect()
   introContext?.revert()
   previousActiveElement?.focus?.()
 })
@@ -284,10 +316,11 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 10000;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto minmax(420px, 1fr);
   align-items: start;
-  min-height: 100vh;
-  overflow: hidden;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
   background: var(--color-surface-900);
   color: oklch(0.94 0.01 250);
@@ -414,7 +447,7 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 1;
   width: min(1120px, 100%);
-  min-height: 430px;
+  min-height: min(520px, max(420px, calc(100dvh - 310px)));
   justify-self: center;
   align-self: stretch;
 }
@@ -427,9 +460,30 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
-.constellation-hero__edges line {
+.constellation-hero__edge {
   stroke: var(--color-edge-faint, oklch(1 0 0 / 0.08));
-  stroke-width: 1;
+  stroke-width: var(--constellation-edge-width-rest, 1px);
+  stroke-linecap: round;
+  opacity: max(var(--constellation-edge-opacity-rest, 0.10), var(--edge-strength, 0.35));
+  transition:
+    stroke var(--constellation-motion-fast, 160ms) var(--constellation-ease-out, ease),
+    opacity var(--constellation-motion-fast, 160ms) var(--constellation-ease-out, ease),
+    stroke-width var(--constellation-motion-fast, 160ms) var(--constellation-ease-out, ease),
+    filter var(--constellation-motion-fast, 160ms) var(--constellation-ease-out, ease);
+}
+
+.constellation-hero__edge--active {
+  stroke: var(--color-glow-active, oklch(0.65 0.20 250 / 0.72));
+  stroke-width: var(--constellation-edge-width-active, 2.2px);
+  opacity: var(--constellation-edge-opacity-active, 0.62);
+  filter: drop-shadow(0 0 10px var(--color-glow-active, oklch(0.65 0.20 250 / 0.72)));
+}
+
+.constellation-hero__trail {
+  fill: var(--trail-color, var(--color-brand-500));
+  opacity: calc(var(--constellation-trail-opacity, 0.18) * var(--trail-opacity-factor, 1));
+  filter: blur(var(--constellation-trail-blur, 2px));
+  pointer-events: none;
 }
 
 @media (max-width: 760px) {
@@ -448,7 +502,7 @@ onBeforeUnmount(() => {
   }
 
   .constellation-hero__stage {
-    min-height: 520px;
+    min-height: 560px;
   }
 }
 

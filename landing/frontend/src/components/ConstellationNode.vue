@@ -8,14 +8,24 @@
       {
         'constellation-node--central': node.is_central,
         'constellation-node--experience': isExperience,
+        'constellation-node--agitated': agitated,
+        'constellation-node--dragging': isDragging,
       },
     ]"
     :style="nodeStyle"
     :data-node-id="node.id"
     :aria-label="ariaLabel"
-    @click="$emit('select', node)"
-    @keydown.enter.prevent="$emit('select', node)"
-    @keydown.space.prevent="$emit('select', node)"
+    @click="handleClick"
+    @keydown.enter.prevent="emit('select', node)"
+    @keydown.space.prevent="emit('select', node)"
+    @pointerenter="emit('node-hover', node)"
+    @pointerleave="emit('node-leave', node)"
+    @focus="emit('node-hover', node)"
+    @blur="emit('node-leave', node)"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="handlePointerUp"
+    @pointercancel="handlePointerUp"
   >
     <span v-if="node.is_central" class="constellation-node__ring" aria-hidden="true"></span>
     <span class="constellation-node__sphere">
@@ -29,7 +39,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 
 const props = defineProps({
@@ -37,12 +47,16 @@ const props = defineProps({
   position: { type: Object, required: true },
   visual: { type: Object, required: true },
   reducedMotion: { type: Boolean, default: false },
+  agitated: { type: Boolean, default: false },
 })
 
-defineEmits(['select'])
+const emit = defineEmits(['select', 'node-hover', 'node-leave', 'node-drag-start', 'node-drag', 'node-drag-end'])
 
 const nodeRef = ref(null)
 const badgeRef = ref(null)
+const isDragging = ref(false)
+const suppressClick = ref(false)
+let dragStartPoint = null
 
 const isExperience = computed(() => props.node.type?.includes('experience') || props.node.type?.includes('education'))
 const showScore = computed(() => typeof props.node.score === 'number' && !props.node.is_central)
@@ -61,6 +75,43 @@ const nodeStyle = computed(() => ({
   '--node-glow': props.visual.glow,
   '--node-color': props.visual.color,
 }))
+
+const handleClick = () => {
+  if (suppressClick.value) {
+    suppressClick.value = false
+    return
+  }
+  emit('select', props.node)
+}
+
+const handlePointerDown = (event) => {
+  if (event.button !== 0 || props.node.is_central || props.reducedMotion) return
+
+  dragStartPoint = { x: event.clientX, y: event.clientY }
+  isDragging.value = true
+  event.currentTarget.setPointerCapture?.(event.pointerId)
+  emit('node-drag-start', props.node, event)
+}
+
+const handlePointerMove = (event) => {
+  if (!isDragging.value) return
+
+  if (dragStartPoint) {
+    const distance = Math.hypot(event.clientX - dragStartPoint.x, event.clientY - dragStartPoint.y)
+    if (distance > 5) suppressClick.value = true
+  }
+
+  emit('node-drag', event)
+}
+
+const handlePointerUp = (event) => {
+  if (!isDragging.value) return
+
+  isDragging.value = false
+  dragStartPoint = null
+  event.currentTarget.releasePointerCapture?.(event.pointerId)
+  emit('node-drag-end', event)
+}
 
 const applyVisual = () => {
   if (!nodeRef.value) return
@@ -82,6 +133,11 @@ const applyVisual = () => {
 
 onMounted(applyVisual)
 watch(() => [props.visual.scale, props.visual.opacity, props.visual.glow, props.node.score], applyVisual)
+
+onBeforeUnmount(() => {
+  if (nodeRef.value) gsap.killTweensOf(nodeRef.value)
+  if (badgeRef.value) gsap.killTweensOf(badgeRef.value)
+})
 </script>
 
 <style scoped>
@@ -94,12 +150,14 @@ watch(() => [props.visual.scale, props.visual.opacity, props.visual.glow, props.
   border: 0;
   border-radius: 999px;
   color: oklch(0.95 0.01 250);
-  cursor: pointer;
+  cursor: grab;
   opacity: var(--node-opacity);
   transform: translate(-50%, -50%) scale(var(--node-scale));
   transform-origin: center;
   background: transparent;
   box-shadow: var(--node-glow);
+  touch-action: none;
+  user-select: none;
 }
 
 .constellation-node:focus-visible {
@@ -175,6 +233,18 @@ watch(() => [props.visual.scale, props.visual.opacity, props.visual.glow, props.
   box-shadow: 0 0 30px oklch(0.55 0.20 250 / 0.5);
 }
 
+.constellation-node--agitated {
+  animation: constellation-vibration 380ms linear infinite;
+}
+
+.constellation-node--dragging {
+  z-index: 6;
+  opacity: var(--constellation-node-drag-opacity, 1);
+  transform: translate(-50%, -50%) scale(calc(var(--node-scale) * var(--constellation-node-drag-scale, 1.08)));
+  box-shadow: var(--constellation-node-drag-shadow, 0 0 48px oklch(0.65 0.20 250 / 0.72));
+  cursor: grabbing;
+}
+
 .constellation-node--central .constellation-node__sphere {
   border-color: oklch(1 0 0 / 0.16);
   background: radial-gradient(circle at 35% 25%, var(--color-brand-400), var(--color-accent-500) 56%, var(--color-brand-700));
@@ -224,6 +294,13 @@ watch(() => [props.visual.scale, props.visual.opacity, props.visual.glow, props.
 
 @keyframes constellation-ring {
   to { transform: rotate(360deg); }
+}
+
+@keyframes constellation-vibration {
+  0%, 100% { transform: translate(-50%, -50%) scale(var(--node-scale)) rotate(0deg); }
+  25% { transform: translate(calc(-50% + 1px), calc(-50% - 1px)) scale(var(--node-scale)) rotate(-0.5deg); }
+  50% { transform: translate(calc(-50% - 1px), calc(-50% + 1px)) scale(var(--node-scale)) rotate(0.45deg); }
+  75% { transform: translate(calc(-50% + 0.5px), calc(-50% + 1px)) scale(var(--node-scale)) rotate(-0.25deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
