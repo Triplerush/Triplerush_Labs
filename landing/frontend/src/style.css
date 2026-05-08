@@ -54,6 +54,40 @@
   --constellation-motion-slow: 500ms;
   --constellation-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Phase 6 constellation polish tokens */
+  --constellation-loading-flash-color: oklch(0.70 0.20 250 / 0.42);
+  --constellation-loading-flash-sheen: oklch(1 0 0 / 0.16);
+  --constellation-loading-flash-duration: 900ms;
+  --constellation-search-flash-ring: 0 0 0 4px oklch(0.55 0.20 250 / 0.18), 0 0 42px oklch(0.65 0.20 250 / 0.34);
+  --constellation-search-flash-duration: 520ms;
+  --constellation-chip-context-bg: oklch(0.55 0.20 250 / 0.12);
+  --constellation-chip-context-bg-hover: oklch(0.60 0.25 300 / 0.16);
+  --constellation-chip-context-border: oklch(0.55 0.20 250 / 0.34);
+  --constellation-chip-context-border-hover: oklch(0.60 0.25 300 / 0.58);
+  --constellation-chip-context-text: oklch(0.92 0.01 250);
+  --constellation-chip-context-shadow: 0 8px 24px oklch(0.55 0.20 250 / 0.16);
+  --constellation-chip-context-duration: 300ms;
+  --constellation-chip-context-stagger: 50ms;
+  --constellation-top-pulse-duration: 3000ms;
+  --constellation-top-pulse-ease: ease-in-out;
+  --constellation-top-1-delay: 0ms;
+  --constellation-top-2-delay: 200ms;
+  --constellation-top-3-delay: 400ms;
+  --constellation-top-1-glow: 0 0 48px oklch(0.65 0.20 250 / 0.72);
+  --constellation-top-2-glow: 0 0 34px oklch(0.60 0.25 300 / 0.56);
+  --constellation-top-3-glow: 0 0 24px oklch(0.70 0.15 200 / 0.46);
+  --constellation-mini-chat-width: 320px;
+  --constellation-mini-chat-max-height: 420px;
+  --constellation-mini-chat-surface: oklch(0.15 0.02 250 / 0.88);
+  --constellation-mini-chat-surface-raised: oklch(0.19 0.025 250 / 0.92);
+  --constellation-mini-chat-border: oklch(1 0 0 / 0.12);
+  --constellation-mini-chat-user-bg: oklch(0.55 0.20 250 / 0.90);
+  --constellation-mini-chat-assistant-bg: oklch(0.22 0.02 250 / 0.86);
+  --constellation-mini-chat-text: oklch(0.94 0.01 250);
+  --constellation-mini-chat-muted: oklch(0.82 0.02 250 / 0.62);
+  --constellation-mini-chat-shadow: 0 24px 64px oklch(0 0 0 / 0.38), 0 0 32px oklch(0.55 0.20 250 / 0.16);
+  --constellation-mini-chat-transition: 220ms;
+
   /* Surface colors for dark mode */
   --color-surface-900: oklch(0.13 0.02 250);
   --color-surface-800: oklch(0.17 0.02 250);
@@ -69,6 +103,10 @@
   --animate-slide-in-right: slide-in-right 0.6s ease-out both;
   --animate-pulse-glow: pulse-glow 3s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
+  --animate-constellation-loading-flash: constellation-loading-flash var(--constellation-loading-flash-duration) ease-out both;
+  --animate-constellation-search-flash: constellation-search-flash var(--constellation-search-flash-duration) var(--constellation-ease-out) both;
+  --animate-constellation-chip-context-in: constellation-chip-context-in var(--constellation-chip-context-duration) var(--constellation-ease-out) both;
+  --animate-constellation-top-pulse: constellation-top-pulse var(--constellation-top-pulse-duration) var(--constellation-top-pulse-ease) infinite;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -118,6 +156,66 @@
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+@keyframes constellation-loading-flash {
+  0% {
+    opacity: 0;
+    background-position: 120% 50%;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    background-position: -20% 50%;
+  }
+}
+
+@keyframes constellation-search-flash {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.55 0.20 250 / 0);
+    border-color: oklch(0.55 0.20 250 / 0.28);
+  }
+  45% {
+    box-shadow: var(--constellation-search-flash-ring);
+    border-color: oklch(0.70 0.20 250 / 0.68);
+  }
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.55 0.20 250 / 0);
+    border-color: oklch(1 0 0 / 0.10);
+  }
+}
+
+@keyframes constellation-chip-context-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes constellation-top-pulse {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  42% {
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes constellation-mini-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -227,6 +325,100 @@ body.light {
 /* Stagger children (driven by GSAP ScrollTrigger) */
 .stagger-children > * {
   opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONSTELLATION PHASE 6 PRIMITIVES
+   ═══════════════════════════════════════════════════════════ */
+.constellation-loading-flash {
+  background:
+    linear-gradient(
+      100deg,
+      transparent 24%,
+      var(--constellation-loading-flash-sheen) 42%,
+      var(--constellation-loading-flash-color) 50%,
+      var(--constellation-loading-flash-sheen) 58%,
+      transparent 76%
+    );
+  background-size: 220% 100%;
+  animation: var(--animate-constellation-loading-flash);
+  pointer-events: none;
+}
+
+.constellation-search-flash {
+  animation: var(--animate-constellation-search-flash);
+}
+
+.constellation-chip-context {
+  border-color: var(--constellation-chip-context-border);
+  background: var(--constellation-chip-context-bg);
+  color: var(--constellation-chip-context-text);
+  box-shadow: var(--constellation-chip-context-shadow);
+  animation: var(--animate-constellation-chip-context-in);
+}
+
+.constellation-chip-context:hover {
+  border-color: var(--constellation-chip-context-border-hover);
+  background: var(--constellation-chip-context-bg-hover);
+}
+
+.constellation-top-pulse {
+  animation: var(--animate-constellation-top-pulse);
+}
+
+.constellation-top-pulse--1 {
+  animation-delay: var(--constellation-top-1-delay);
+  box-shadow: var(--constellation-top-1-glow);
+}
+
+.constellation-top-pulse--2 {
+  animation-delay: var(--constellation-top-2-delay);
+  box-shadow: var(--constellation-top-2-glow);
+}
+
+.constellation-top-pulse--3 {
+  animation-delay: var(--constellation-top-3-delay);
+  box-shadow: var(--constellation-top-3-glow);
+}
+
+.constellation-mini-chat {
+  width: min(var(--constellation-mini-chat-width), calc(100vw - 32px));
+  max-height: min(var(--constellation-mini-chat-max-height), calc(100dvh - 32px));
+  border: 1px solid var(--constellation-mini-chat-border);
+  background: var(--constellation-mini-chat-surface);
+  color: var(--constellation-mini-chat-text);
+  box-shadow: var(--constellation-mini-chat-shadow);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: constellation-mini-chat-in var(--constellation-mini-chat-transition) var(--constellation-ease-out) both;
+}
+
+.constellation-mini-chat__bubble {
+  background: var(--constellation-mini-chat-assistant-bg);
+  color: var(--constellation-mini-chat-text);
+}
+
+.constellation-mini-chat__bubble--user {
+  background: var(--constellation-mini-chat-user-bg);
+}
+
+.constellation-mini-chat__muted {
+  color: var(--constellation-mini-chat-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation-loading-flash,
+  .constellation-search-flash,
+  .constellation-chip-context,
+  .constellation-top-pulse,
+  .constellation-mini-chat {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .constellation-loading-flash {
+    opacity: 0 !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════

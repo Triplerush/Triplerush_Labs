@@ -10,6 +10,7 @@
         'constellation-node--experience': isExperience,
         'constellation-node--agitated': agitated,
         'constellation-node--dragging': isDragging,
+        'constellation-node--pulse': pulseRank > 0 && !reducedMotion,
       },
     ]"
     :style="nodeStyle"
@@ -48,6 +49,7 @@ const props = defineProps({
   visual: { type: Object, required: true },
   reducedMotion: { type: Boolean, default: false },
   agitated: { type: Boolean, default: false },
+  pulseRank: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['select', 'node-hover', 'node-leave', 'node-drag-start', 'node-drag', 'node-drag-end'])
@@ -74,6 +76,7 @@ const nodeStyle = computed(() => ({
   '--node-opacity': props.visual.opacity,
   '--node-glow': props.visual.glow,
   '--node-color': props.visual.color,
+  '--node-pulse-delay': `${Math.max(0, props.pulseRank - 1) * 180}ms`,
 }))
 
 const handleClick = () => {
@@ -245,6 +248,18 @@ onBeforeUnmount(() => {
   cursor: grabbing;
 }
 
+.constellation-node--pulse::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border: 1px solid color-mix(in oklch, var(--node-color), white 18%);
+  border-radius: inherit;
+  opacity: 0;
+  animation: constellation-top-pulse 2400ms ease-out infinite;
+  animation-delay: var(--node-pulse-delay);
+  pointer-events: none;
+}
+
 .constellation-node--central .constellation-node__sphere {
   border-color: oklch(1 0 0 / 0.16);
   background: radial-gradient(circle at 35% 25%, var(--color-brand-400), var(--color-accent-500) 56%, var(--color-brand-700));
@@ -303,9 +318,21 @@ onBeforeUnmount(() => {
   75% { transform: translate(calc(-50% + 0.5px), calc(-50% + 1px)) scale(var(--node-scale)) rotate(-0.25deg); }
 }
 
+@keyframes constellation-top-pulse {
+  0% {
+    opacity: 0.48;
+    transform: scale(0.88);
+  }
+  68%, 100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .constellation-node,
-  .constellation-node__ring {
+  .constellation-node__ring,
+  .constellation-node::after {
     animation: none !important;
     transition: none !important;
   }

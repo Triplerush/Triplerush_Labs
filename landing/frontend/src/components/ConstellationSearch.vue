@@ -15,14 +15,21 @@
         @keydown.escape="$emit('clear')"
       >
       <button class="constellation-search__submit" type="submit" :disabled="isSearching || !modelValue.trim()">
-        <span v-if="isSearching">Buscando</span>
+        <span v-if="isSearching" class="constellation-search__loading">
+          <span class="constellation-search__spinner" aria-hidden="true"></span>
+          Buscando
+        </span>
         <span v-else>Buscar</span>
       </button>
     </div>
 
-    <div class="constellation-search__chips" aria-label="Sugerencias de búsqueda">
+    <div
+      class="constellation-search__chips"
+      :class="{ 'constellation-search__chips--contextual': hasContextualSuggestions }"
+      :aria-label="hasContextualSuggestions ? 'Sugerencias derivadas de los resultados' : 'Sugerencias de búsqueda'"
+    >
       <button
-        v-for="suggestion in suggestions"
+        v-for="suggestion in visibleSuggestions"
         :key="suggestion"
         type="button"
         class="constellation-search__chip"
@@ -35,11 +42,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   modelValue: { type: String, default: '' },
   isSearching: { type: Boolean, default: false },
+  contextualSuggestions: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'submit', 'clear'])
@@ -52,6 +60,9 @@ const suggestions = [
   'Pipelines MLOps con Docker',
   'Arquitectura backend escalable',
 ]
+
+const hasContextualSuggestions = computed(() => props.contextualSuggestions.length > 0)
+const visibleSuggestions = computed(() => hasContextualSuggestions.value ? props.contextualSuggestions : suggestions)
 
 const submit = () => emit('submit')
 
@@ -116,6 +127,22 @@ onMounted(() => {
   cursor: pointer;
 }
 
+.constellation-search__loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.constellation-search__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid oklch(1 0 0 / 0.32);
+  border-top-color: white;
+  border-radius: 999px;
+  animation: constellation-search-spin 780ms linear infinite;
+}
+
 .constellation-search__submit:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -132,6 +159,12 @@ onMounted(() => {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+}
+
+.constellation-search__chips--contextual {
+  justify-content: flex-start;
+  width: min(760px, calc(100vw - 32px));
+  margin-inline: auto;
 }
 
 .constellation-search__chip {
@@ -151,6 +184,15 @@ onMounted(() => {
   background: oklch(0.55 0.20 250 / 0.1);
 }
 
+.constellation-search__chips--contextual .constellation-search__chip {
+  border-color: oklch(0.70 0.15 200 / 0.34);
+  background: oklch(0.70 0.15 200 / 0.08);
+}
+
+@keyframes constellation-search-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 640px) {
   .constellation-search__bar {
     flex-direction: column;
@@ -162,6 +204,12 @@ onMounted(() => {
 
   .constellation-search__chip {
     min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation-search__spinner {
+    animation: none;
   }
 }
 </style>

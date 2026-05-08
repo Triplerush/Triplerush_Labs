@@ -102,7 +102,7 @@ export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
     return map
   })
 
-  const getBoundaryPadding = () => stageSize.value.width < 760 ? 48 : 72
+  const getBoundaryPadding = () => stageSize.value.width < 768 ? 48 : 72
 
   const clampPhysicsNode = (node) => {
     const padding = Math.max(getBoundaryPadding(), node.radius || 48)
@@ -127,7 +127,7 @@ export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
 
     const now = performance.now()
     const maxAge = 420
-    const mobile = stageSize.value.width < 760
+    const mobile = stageSize.value.width < 768
     const maxPerNode = mobile ? 4 : 8
     const nextTrailPoints = trailPoints.value
       .map((point) => ({ ...point, age: now - point.createdAt }))
@@ -229,7 +229,7 @@ export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
       const x = previous?.x ?? (fallback.x / 100) * stageSize.value.width
       const y = previous?.y ?? (fallback.y / 100) * stageSize.value.height
       const radius = node.is_central ? 82 : node.type?.includes('experience') || node.type?.includes('education') ? 48 : 54
-      const padding = Math.max(stageSize.value.width < 760 ? 48 : 72, radius)
+      const padding = Math.max(stageSize.value.width < 768 ? 48 : 72, radius)
 
       return {
         ...node,

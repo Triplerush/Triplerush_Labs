@@ -28,6 +28,7 @@
     <ConstellationSearch
       v-model="query"
       :is-searching="status === 'searching'"
+      :contextual-suggestions="contextualSuggestions"
       class="constellation-hero__search"
       @submit="search"
       @clear="clearSearch"
@@ -37,7 +38,18 @@
       {{ errorMessage }}
     </p>
 
-    <div ref="stageRef" class="constellation-hero__stage" role="group" aria-label="Constelación semántica del portfolio">
+    <div v-if="isMobileFallback && status === 'searching'" class="constellation-hero__mobile-loading" role="status" aria-live="polite">
+      <span class="constellation-hero__searching-orbit" aria-hidden="true"></span>
+      Reordenando resultados
+    </div>
+
+    <div
+      v-if="!isMobileFallback"
+      ref="stageRef"
+      class="constellation-hero__stage"
+      role="group"
+      aria-label="Constelación semántica del portfolio"
+    >
       <svg class="constellation-hero__edges" aria-hidden="true">
         <circle
           v-for="point in trailPoints"
@@ -61,6 +73,11 @@
         />
       </svg>
 
+      <div v-if="status === 'searching'" class="constellation-hero__searching" role="status" aria-live="polite">
+        <span class="constellation-hero__searching-orbit" aria-hidden="true"></span>
+        <span>Reordenando constelación</span>
+      </div>
+
       <ConstellationNode
         v-for="(node, index) in tabOrderedNodes"
         :key="node.id"
@@ -69,6 +86,7 @@
         :visual="visualMap[node.id]"
         :reduced-motion="reducedMotion"
         :agitated="node.is_central && isCentralAgitated"
+        :pulse-rank="pulseRankMap[node.id] || 0"
         :tabindex="0"
         @select="handleExpandNode"
         @node-hover="hoveredNodeId = node.id"
@@ -78,6 +96,13 @@
         @node-drag-end="endDrag"
       />
     </div>
+
+    <ConstellationFallback
+      v-else
+      :nodes="tabOrderedNodes"
+      :reduced-motion="reducedMotion"
+      @select="handleExpandNode"
+    />
 
     <div role="status" aria-live="polite" class="sr-only">
       {{ lastAnnouncement }}
@@ -93,11 +118,12 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 import { useConstellation } from '../composables/useConstellation'
 import { useConstellationPhysics } from '../composables/useConstellationPhysics'
 import ConstellationDetail from './ConstellationDetail.vue'
+import ConstellationFallback from './ConstellationFallback.vue'
 import ConstellationNode from './ConstellationNode.vue'
 import ConstellationSearch from './ConstellationSearch.vue'
 
@@ -121,12 +147,14 @@ const {
   clearSearch,
 } = useConstellation()
 
-const reducedMotion = ref(false)
+const reducedMotion = ref(typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false)
+const isMobileFallback = ref(typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false)
 const activeNodeId = ref('')
 const hoveredNodeId = ref('')
 const heroRef = ref(null)
 const stageRef = ref(null)
 const stageSize = ref({ width: 1120, height: 430 })
+const physicsReducedMotion = computed(() => reducedMotion.value || isMobileFallback.value)
 
 const {
   centralPosition,
@@ -136,7 +164,7 @@ const {
   startDrag,
   drag,
   endDrag,
-} = useConstellationPhysics({ nodes, stageSize, reducedMotion })
+} = useConstellationPhysics({ nodes, stageSize, reducedMotion: physicsReducedMotion })
 
 const colorByCategory = {
   person: 'var(--color-brand-500)',
@@ -147,6 +175,43 @@ const colorByCategory = {
 }
 
 const nonCentralNodes = computed(() => nodes.value.filter((node) => !node.is_central))
+
+const topScoredNodes = computed(() => rankedNodes.value
+  .filter((node) => !node.is_central && typeof node.score === 'number')
+  .slice(0, 3))
+
+const pulseRankMap = computed(() => {
+  if (status.value !== 'results' && status.value !== 'expanded') return {}
+  return topScoredNodes.value.reduce((map, node, index) => {
+    map[node.id] = index + 1
+    return map
+  }, {})
+})
+
+const normalizeChip = (value) => String(value || '').trim().replace(/\s+/g, ' ')
+
+const contextualSuggestions = computed(() => {
+  if (status.value !== 'results' && status.value !== 'expanded') return []
+
+  const seen = new Set()
+  const chips = []
+  const addChip = (value) => {
+    const chip = normalizeChip(value)
+    const key = chip.toLocaleLowerCase()
+    if (!chip || chip.length < 3 || seen.has(key)) return
+    seen.add(key)
+    chips.push(chip)
+  }
+
+  topScoredNodes.value.forEach((node) => {
+    addChip(node.name)
+    addChip(node.category)
+    ;(node.data?.demonstrates || []).forEach(addChip)
+    ;(node.data?.stack || []).forEach(addChip)
+  })
+
+  return chips.slice(0, 8)
+})
 
 const tabOrderedNodes = computed(() => {
   if (status.value === 'results' || status.value === 'expanded') return rankedNodes.value
@@ -209,14 +274,14 @@ const getFocusableElements = () => {
     : heroRef.value
   if (!focusScope) return []
 
-  return [...focusScope.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])')]
+  return [...focusScope.querySelectorAll('button, input, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
     .filter((element) => element !== heroRef.value && !element.disabled && element.offsetParent !== null)
 }
 
 const handleKeydown = (event) => {
   if (event.key === 'Escape') {
     if (selectedNode.value) {
-      closeDetail()
+      handleCloseDetail()
     } else {
       closeConstellation()
     }
@@ -264,12 +329,17 @@ const handleCloseDetail = () => {
 }
 
 let mediaQuery = null
+let mobileQuery = null
 let introContext = null
 let previousActiveElement = null
 let resizeObserver = null
 
 const handleMotionChange = (event) => {
   reducedMotion.value = event.matches
+}
+
+const handleMobileChange = (event) => {
+  isMobileFallback.value = event.matches
 }
 
 const updateStageSize = () => {
@@ -281,17 +351,28 @@ const updateStageSize = () => {
   }
 }
 
+const observeStage = () => {
+  resizeObserver?.disconnect()
+  if (stageRef.value) {
+    resizeObserver?.observe(stageRef.value)
+    updateStageSize()
+  }
+}
+
 onMounted(() => {
   previousActiveElement = document.activeElement
   mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotion.value = mediaQuery.matches
   mediaQuery.addEventListener?.('change', handleMotionChange)
+  mobileQuery = window.matchMedia('(max-width: 767px)')
+  isMobileFallback.value = mobileQuery.matches
+  mobileQuery.addEventListener?.('change', handleMobileChange)
   updateStageSize()
 
   resizeObserver = new ResizeObserver(updateStageSize)
-  if (stageRef.value) resizeObserver.observe(stageRef.value)
+  observeStage()
 
-  if (!reducedMotion.value) {
+  if (!reducedMotion.value && !isMobileFallback.value) {
     introContext = gsap.context(() => {
       gsap.fromTo('.constellation-hero__intro > *, .constellation-hero__search', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out' })
     })
@@ -302,8 +383,14 @@ onMounted(() => {
   })
 })
 
+watch(isMobileFallback, async () => {
+  await nextTick()
+  observeStage()
+})
+
 onBeforeUnmount(() => {
   mediaQuery?.removeEventListener?.('change', handleMotionChange)
+  mobileQuery?.removeEventListener?.('change', handleMobileChange)
   resizeObserver?.disconnect()
   introContext?.revert()
   previousActiveElement?.focus?.()
@@ -443,6 +530,23 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+.constellation-hero__mobile-loading {
+  position: relative;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 13px;
+  border: 1px solid oklch(1 0 0 / 0.12);
+  border-radius: 999px;
+  background: oklch(0.10 0.02 250 / 0.72);
+  color: oklch(0.94 0.01 250);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .constellation-hero__stage {
   position: relative;
   z-index: 1;
@@ -486,7 +590,42 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-@media (max-width: 760px) {
+.constellation-hero__searching {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid oklch(1 0 0 / 0.12);
+  border-radius: 999px;
+  background: oklch(0.10 0.02 250 / 0.78);
+  box-shadow: 0 18px 70px oklch(0 0 0 / 0.32);
+  color: oklch(0.94 0.01 250);
+  font-size: 13px;
+  font-weight: 800;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(16px);
+}
+
+.constellation-hero__searching-orbit {
+  width: 18px;
+  height: 18px;
+  border: 2px solid oklch(1 0 0 / 0.22);
+  border-top-color: var(--color-brand-300);
+  border-right-color: var(--color-accent-400);
+  border-radius: 999px;
+  animation: constellation-hero-orbit 850ms linear infinite;
+}
+
+@keyframes constellation-hero-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 767px) {
   .constellation-hero {
     grid-template-rows: auto auto auto auto 1fr;
     padding: 14px;
@@ -499,10 +638,6 @@ onBeforeUnmount(() => {
 
   .constellation-hero__intro {
     margin-top: 18px;
-  }
-
-  .constellation-hero__stage {
-    min-height: 560px;
   }
 }
 
