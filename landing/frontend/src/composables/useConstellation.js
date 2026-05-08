@@ -1,92 +1,56 @@
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-const STORAGE_KEY = 'constellation:last-query'
-
-const seedNodes = [
+const fallbackNodes = [
   {
     id: 'fernando-canal',
     type: 'person',
-    name: 'Fernando Rubén Canal Mendoza',
+    name: 'Fernando Canal',
     category: 'person',
     is_central: true,
     score: null,
     data: {
       role: 'AI Software Engineer',
-      summary: 'Ingeniero de software especializado en backend, RAG, LLMs, MLOps y despliegue de aplicaciones inteligentes.',
-      highlights: [
-        'Sistemas RAG en producción con embeddings y recuperación vectorial.',
-        'Backend en Python/FastAPI y Java/Spring Boot.',
-        'Despliegue con Docker, Kubernetes, AWS y CI/CD.',
-      ],
-      contact: {
-        email: 'fernandorcm9@gmail.com',
-        linkedin: 'www.linkedin.com/in/fcanalm',
-        location: 'Arequipa, Perú',
-      },
+      summary: 'Ingeniero de software backend evolucionando hacia AI Engineering.',
+      connections: ['experience', 'education', 'skills'],
     },
   },
   {
-    id: 'experiencia-laboral',
-    type: 'experience-bundle',
-    name: 'Experiencia Laboral',
-    category: 'backend',
+    id: 'experience',
+    type: 'experience',
+    name: 'Experiencia',
+    category: 'experience',
     is_central: false,
     score: null,
     data: {
-      summary: 'Trayectoria backend evolucionando hacia AI Engineering, arquitectura escalable y soluciones RAG.',
-      highlights: [
-        'PHAXSI: arquitectura modular, pipelines geoespaciales y pagos multimoneda.',
-        'Anyone AI: liderazgo técnico en sistema RAG para pólizas.',
-        'SmartPressure y freelance: APIs Spring Boot, PostgreSQL, Docker y testing.',
-      ],
-      stack: ['Python', 'FastAPI', 'Java', 'Spring Boot', 'LangChain', 'Docker'],
+      summary: 'Trayectoria backend evolucionando hacia AI Engineering.',
+      connections: ['fernando-canal'],
     },
   },
   {
-    id: 'certificaciones-estudios',
-    type: 'education-bundle',
-    name: 'Certificaciones y Estudios',
-    category: 'ai-ml',
+    id: 'education',
+    type: 'education',
+    name: 'Formación',
+    category: 'education',
     is_central: false,
     score: null,
     data: {
-      summary: 'Formación en Ingeniería de Sistemas, AI/ML, agentes, aplicaciones LLM y DevOps multicloud.',
-      highlights: [
-        'Ingeniería de Sistemas - UNSA.',
-        'Aprendizaje por refuerzo con Python.',
-        'DevOps multicloud, agentes autónomos y aplicaciones basadas en LLMs.',
-      ],
-      stack: ['LLMs', 'Agentes autónomos', 'Docker', 'Kubernetes', 'Spring Boot'],
+      summary: 'Educación formal en Ingeniería de Sistemas y certificaciones en AI/ML.',
+      connections: ['fernando-canal'],
     },
   },
   {
-    id: 'auto-profiling',
-    type: 'project',
-    name: 'Auto Profiling + AI Layer',
-    category: 'backend',
+    id: 'skills',
+    type: 'skill',
+    name: 'Skills',
+    category: 'skill',
     is_central: false,
     score: null,
     data: {
-      description: 'Plataforma que visualiza análisis de datos como dashboards interactivos con agente AI integrado.',
-      url: '/profiling/',
-      status: 'live',
-      highlights: [
-        'Agente AI que explica dashboards en lenguaje natural.',
-        'RAG sobre Data Contracts para búsqueda semántica.',
-        'Model Service con predicciones y explicaciones LLM.',
-      ],
-      stack: ['FastAPI', 'Vue 3', 'LangChain', 'FAISS', 'Docker'],
+      summary: 'AI/ML, backend, MLOps y frontend.',
+      connections: ['fernando-canal'],
     },
   },
 ]
-
-const getInitialQuery = () => {
-  try {
-    return sessionStorage.getItem(STORAGE_KEY) || ''
-  } catch {
-    return ''
-  }
-}
 
 const normalizeNode = (node) => ({
   ...node,
@@ -96,12 +60,12 @@ const normalizeNode = (node) => ({
 })
 
 export function useConstellation() {
-  const status = ref('idle')
-  const query = ref(getInitialQuery())
-  const nodes = ref(seedNodes)
+  const status = ref('loading')
+  const query = ref('')
+  const nodes = ref(fallbackNodes)
   const selectedNode = ref(null)
   const errorMessage = ref('')
-  const lastAnnouncement = ref('Constelación semántica lista.')
+  const lastAnnouncement = ref('Cargando constelación semántica.')
 
   const centralNode = computed(() => nodes.value.find((node) => node.is_central))
 
@@ -114,21 +78,32 @@ export function useConstellation() {
   })
 
   const hasScores = computed(() => nodes.value.some((node) => typeof node.score === 'number'))
+  const searchActive = computed(() => status.value === 'results' || status.value === 'expanded')
+
+  const loadConstellation = async () => {
+    try {
+      const response = await fetch('/v1/constellation')
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const payload = await response.json()
+      if (Array.isArray(payload) && payload.length) {
+        nodes.value = payload.map(normalizeNode)
+      }
+      status.value = 'idle'
+      lastAnnouncement.value = `Constelación cargada con ${nodes.value.length} nodos.`
+    } catch {
+      status.value = 'idle'
+      lastAnnouncement.value = 'Constelación en modo local (backend no disponible).'
+    }
+  }
 
   const search = async (nextQuery = query.value) => {
     const cleanQuery = nextQuery.trim()
     query.value = cleanQuery
 
     if (!cleanQuery) {
-      status.value = 'idle'
+      status.value = hasScores.value ? 'results' : 'idle'
       errorMessage.value = ''
       return
-    }
-
-    try {
-      sessionStorage.setItem(STORAGE_KEY, cleanQuery)
-    } catch {
-      // sessionStorage can be unavailable in private or restricted contexts.
     }
 
     status.value = 'searching'
@@ -149,14 +124,14 @@ export function useConstellation() {
       }
 
       const payload = await response.json()
-      nodes.value = Array.isArray(payload) ? payload.map(normalizeNode) : seedNodes
+      if (Array.isArray(payload)) {
+        nodes.value = payload.map(normalizeNode)
+      }
       status.value = 'results'
       updateAnnouncement()
     } catch (error) {
-      nodes.value = seedNodes
-      selectedNode.value = null
       status.value = 'error'
-      errorMessage.value = error.message || 'El backend semántico no está disponible. Puedes ver el portfolio clásico.'
+      errorMessage.value = error.message || 'El backend semántico no está disponible.'
       lastAnnouncement.value = `No se pudo completar la búsqueda. ${errorMessage.value}`
     }
   }
@@ -166,6 +141,11 @@ export function useConstellation() {
     status.value = 'expanded'
   }
 
+  const focusNodeById = (nodeId) => {
+    const target = nodes.value.find((node) => node.id === nodeId)
+    if (target) expandNode(target)
+  }
+
   const closeDetail = () => {
     selectedNode.value = null
     status.value = hasScores.value ? 'results' : 'idle'
@@ -173,16 +153,11 @@ export function useConstellation() {
 
   const clearSearch = () => {
     query.value = ''
-    nodes.value = seedNodes
+    nodes.value = nodes.value.map((node) => ({ ...node, score: null }))
     selectedNode.value = null
     errorMessage.value = ''
     status.value = 'idle'
     lastAnnouncement.value = 'Búsqueda limpiada. Constelación en reposo.'
-    try {
-      sessionStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // Ignore storage failures.
-    }
   }
 
   const updateAnnouncement = () => {
@@ -200,6 +175,8 @@ export function useConstellation() {
     lastAnnouncement.value = `Búsqueda completada. ${scored.length} resultados. Mejor coincidencia: ${best.name} con score ${best.score.toFixed(2)}.${otherNames ? ` Otros relevantes: ${otherNames}.` : ''}`
   }
 
+  onMounted(loadConstellation)
+
   return {
     status,
     query,
@@ -210,8 +187,10 @@ export function useConstellation() {
     errorMessage,
     lastAnnouncement,
     hasScores,
+    searchActive,
     search,
     expandNode,
+    focusNodeById,
     closeDetail,
     clearSearch,
   }

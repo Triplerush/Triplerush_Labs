@@ -4,13 +4,14 @@
     type="button"
     class="constellation-node"
     :class="[
-      `constellation-node--${node.category || 'backend'}`,
+      `constellation-node--${node.type || 'project'}`,
       {
         'constellation-node--central': node.is_central,
-        'constellation-node--experience': isExperience,
-        'constellation-node--agitated': agitated,
         'constellation-node--dragging': isDragging,
-        'constellation-node--pulse': pulseRank > 0 && !reducedMotion,
+        'constellation-node--related': related,
+        'constellation-node--muted': muted,
+        'constellation-node--top': topRank === 1,
+        'constellation-node--podium': topRank === 2 || topRank === 3,
       },
     ]"
     :style="nodeStyle"
@@ -28,41 +29,67 @@
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
   >
-    <span v-if="node.is_central" class="constellation-node__ring" aria-hidden="true"></span>
-    <span class="constellation-node__sphere">
-      <span class="constellation-node__label">{{ label }}</span>
-      <span v-if="node.is_central" class="constellation-node__role">AI Software Engineer</span>
-    </span>
-    <span v-if="showScore" ref="badgeRef" class="constellation-node__score">
-      {{ node.score.toFixed(2) }}
+    <span class="constellation-node__shape">
+      <span class="constellation-node__type" v-if="!node.is_central">{{ typeLabel }}</span>
+      <span class="constellation-node__primary">{{ primaryLabel }}</span>
+      <span v-if="secondaryLabel" class="constellation-node__secondary">{{ secondaryLabel }}</span>
+      <span v-if="showScore" class="constellation-node__score">{{ node.score.toFixed(2) }}</span>
     </span>
   </button>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { gsap } from 'gsap'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   node: { type: Object, required: true },
   position: { type: Object, required: true },
   visual: { type: Object, required: true },
   reducedMotion: { type: Boolean, default: false },
-  agitated: { type: Boolean, default: false },
-  pulseRank: { type: Number, default: 0 },
+  related: { type: Boolean, default: false },
+  muted: { type: Boolean, default: false },
+  topRank: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['select', 'node-hover', 'node-leave', 'node-drag-start', 'node-drag', 'node-drag-end'])
 
 const nodeRef = ref(null)
-const badgeRef = ref(null)
 const isDragging = ref(false)
 const suppressClick = ref(false)
 let dragStartPoint = null
 
-const isExperience = computed(() => props.node.type?.includes('experience') || props.node.type?.includes('education'))
 const showScore = computed(() => typeof props.node.score === 'number' && !props.node.is_central)
-const label = computed(() => props.node.is_central ? 'FC' : props.node.name)
+
+const primaryLabel = computed(() => {
+  const data = props.node.data || {}
+  if (props.node.is_central) return 'Fernando'
+  if (props.node.type === 'experience') return 'Experiencia'
+  if (props.node.type === 'education') return 'Formación'
+  if (props.node.type === 'skill') return 'Skills'
+  if (props.node.type === 'project') {
+    return data.name || props.node.name
+  }
+  return props.node.name
+})
+
+const secondaryLabel = computed(() => {
+  if (props.node.is_central) return 'Canal'
+  if (props.node.type === 'project') {
+    const data = props.node.data || {}
+    return data.status === 'live' ? 'Live demo' : ''
+  }
+  return ''
+})
+
+const typeLabel = computed(() => {
+  switch (props.node.type) {
+    case 'experience': return 'Experiencia'
+    case 'education': return 'Formación'
+    case 'skill': return 'Skills'
+    case 'project': return 'Proyecto'
+    default: return ''
+  }
+})
 
 const ariaLabel = computed(() => {
   const score = typeof props.node.score === 'number' ? `, score ${props.node.score.toFixed(2)}` : ''
@@ -72,11 +99,8 @@ const ariaLabel = computed(() => {
 const nodeStyle = computed(() => ({
   left: `${props.position.x}%`,
   top: `${props.position.y}%`,
-  '--node-scale': props.visual.scale,
-  '--node-opacity': props.visual.opacity,
-  '--node-glow': props.visual.glow,
-  '--node-color': props.visual.color,
-  '--node-pulse-delay': `${Math.max(0, props.pulseRank - 1) * 180}ms`,
+  '--node-scale': props.visual?.scale ?? 1,
+  '--node-opacity': props.visual?.opacity ?? 1,
 }))
 
 const handleClick = () => {
@@ -88,7 +112,7 @@ const handleClick = () => {
 }
 
 const handlePointerDown = (event) => {
-  if (event.button !== 0 || props.node.is_central || props.reducedMotion) return
+  if (event.button !== 0 || props.reducedMotion || props.node.is_central) return
 
   dragStartPoint = { x: event.clientX, y: event.clientY }
   isDragging.value = true
@@ -115,224 +139,235 @@ const handlePointerUp = (event) => {
   event.currentTarget.releasePointerCapture?.(event.pointerId)
   emit('node-drag-end', event)
 }
-
-const applyVisual = () => {
-  if (!nodeRef.value) return
-
-  const vars = {
-    scale: props.visual.scale,
-    opacity: props.visual.opacity,
-    boxShadow: props.visual.glow,
-    duration: props.reducedMotion ? 0 : 0.8,
-    ease: 'power3.out',
-  }
-
-  gsap.to(nodeRef.value, vars)
-
-  if (badgeRef.value && !props.reducedMotion) {
-    gsap.fromTo(badgeRef.value, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.2, ease: 'power2.out' })
-  }
-}
-
-onMounted(applyVisual)
-watch(() => [props.visual.scale, props.visual.opacity, props.visual.glow, props.node.score], applyVisual)
-
-onBeforeUnmount(() => {
-  if (nodeRef.value) gsap.killTweensOf(nodeRef.value)
-  if (badgeRef.value) gsap.killTweensOf(badgeRef.value)
-})
 </script>
 
 <style scoped>
 .constellation-node {
   position: absolute;
   z-index: 3;
-  width: 80px;
-  height: 80px;
+  display: grid;
+  width: 104px;
+  height: 104px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
-  color: oklch(0.95 0.01 250);
-  cursor: grab;
-  opacity: var(--node-opacity);
-  transform: translate(-50%, -50%) scale(var(--node-scale));
-  transform-origin: center;
   background: transparent;
-  box-shadow: var(--node-glow);
-  touch-action: none;
+  color: var(--color-text);
+  cursor: pointer;
+  opacity: var(--node-opacity, 1);
+  transform: translate(-50%, -50%) scale(var(--node-scale, 1));
+  transform-origin: center;
   user-select: none;
+  transition: opacity 480ms var(--constellation-ease-out),
+              transform 480ms var(--constellation-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation-node {
+    transition: none;
+  }
 }
 
 .constellation-node:focus-visible {
-  outline: 2px solid var(--color-brand-400);
-  outline-offset: 6px;
+  outline: none;
 }
 
-.constellation-node__sphere {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 2px;
-  border: 1px solid oklch(1 0 0 / 0.08);
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 30% 25%, color-mix(in oklch, var(--node-color), white 16%), transparent 32%),
-    radial-gradient(circle at 38% 35%, var(--node-color), oklch(0.20 0.04 250) 72%);
-  backdrop-filter: blur(8px);
-  overflow: hidden;
+.constellation-node:focus-visible .constellation-node__shape {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
-.constellation-node__label {
-  max-width: 68px;
-  padding: 0 5px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.08;
-  font-weight: 700;
+/* The shape fills the button and centers its labels inside. */
+.constellation-node__shape {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  color: var(--color-text);
   text-align: center;
-  text-shadow: 0 1px 2px oklch(0 0 0 / 0.75);
+  transition: border-color 240ms var(--constellation-ease-out),
+              background-color 240ms var(--constellation-ease-out),
+              box-shadow 240ms var(--constellation-ease-out);
 }
 
-.constellation-node__role {
-  max-width: 86px;
+.constellation-node__type {
   font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
   line-height: 1;
-  opacity: 0.72;
+}
+
+.constellation-node__primary {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.005em;
+  color: inherit;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.constellation-node__secondary {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.7;
+  line-height: 1;
 }
 
 .constellation-node__score {
   position: absolute;
   top: -8px;
-  right: -10px;
+  right: -8px;
   z-index: 4;
-  padding: 2px 7px;
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-radius: 999px;
-  background: var(--color-glow-active, oklch(0.65 0.20 250 / 0.6));
-  color: oklch(0.95 0.01 250);
-  font-family: var(--font-mono);
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  background: var(--color-bg);
+  color: var(--color-accent);
   font-size: 10px;
-  line-height: 1.35;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-.constellation-node--experience {
-  width: 72px;
-  height: 72px;
+/* ── Type variants — light or contrasting fills ────── */
+/* Person: larger button, filled light fill, dark text */
+.constellation-node--person {
+  width: 124px;
+  height: 124px;
 }
 
-.constellation-node--experience .constellation-node__sphere {
-  border: 2px solid var(--node-color);
-  background: oklch(0.17 0.02 250 / 0.45);
+.constellation-node--person .constellation-node__shape {
+  padding: 18px 14px;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-node-core);
+  color: #08090B;
+  box-shadow: 0 0 32px rgba(0, 229, 255, 0.18);
 }
 
-.constellation-node--central {
-  z-index: 5;
-  width: 140px;
-  height: 140px;
-  opacity: 1;
-  box-shadow: 0 0 30px oklch(0.55 0.20 250 / 0.5);
+.constellation-node--person .constellation-node__primary {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.constellation-node--agitated {
-  animation: constellation-vibration 380ms linear infinite;
+.constellation-node--person .constellation-node__secondary {
+  color: #38393E;
+  font-size: 11px;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Project: cyan-filled — the "live demo" call to action */
+.constellation-node--project .constellation-node__shape {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #08090B;
+  box-shadow: 0 0 26px rgba(0, 229, 255, 0.36);
+}
+
+.constellation-node--project .constellation-node__type {
+  color: #0A4047;
+}
+
+.constellation-node--project .constellation-node__secondary {
+  color: #08090B;
+  opacity: 0.8;
+}
+
+/* Skill: subtle cyan tint, accent text */
+.constellation-node--skill .constellation-node__shape {
+  border-color: rgba(0, 229, 255, 0.42);
+  border-style: dashed;
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--color-text);
+}
+
+.constellation-node--skill .constellation-node__primary {
+  color: var(--color-accent);
+}
+
+/* Experience: dark filled surface, white text, subtle accent border */
+.constellation-node--experience .constellation-node__shape {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Education: dark filled surface with neutral border */
+.constellation-node--education .constellation-node__shape {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Hover & states ──────────────────────────────── */
+.constellation-node:hover .constellation-node__shape {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.28);
+}
+
+.constellation-node--related .constellation-node__shape {
+  border-color: var(--color-accent);
+}
+
+.constellation-node--muted {
+  opacity: calc(var(--node-opacity, 1) * 0.34);
 }
 
 .constellation-node--dragging {
   z-index: 6;
-  opacity: var(--constellation-node-drag-opacity, 1);
-  transform: translate(-50%, -50%) scale(calc(var(--node-scale) * var(--constellation-node-drag-scale, 1.08)));
-  box-shadow: var(--constellation-node-drag-shadow, 0 0 48px oklch(0.65 0.20 250 / 0.72));
-  cursor: grabbing;
 }
 
-.constellation-node--pulse::after {
+.constellation-node--dragging .constellation-node__shape {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 36px rgba(0, 229, 255, 0.42);
+}
+
+/* Top-ranked search result */
+.constellation-node--top .constellation-node__shape {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.18),
+              0 0 36px rgba(0, 229, 255, 0.42);
+}
+
+.constellation-node--top .constellation-node__shape::after {
   content: '';
   position: absolute;
-  inset: -9px;
-  border: 1px solid color-mix(in oklch, var(--node-color), white 18%);
+  inset: -10px;
   border-radius: inherit;
+  border: 1px solid rgba(0, 229, 255, 0.55);
   opacity: 0;
-  animation: constellation-top-pulse 2400ms ease-out infinite;
-  animation-delay: var(--node-pulse-delay);
   pointer-events: none;
+  animation: constellation-node-pulse 2200ms ease-out infinite;
 }
 
-.constellation-node--central .constellation-node__sphere {
-  border-color: oklch(1 0 0 / 0.16);
-  background: radial-gradient(circle at 35% 25%, var(--color-brand-400), var(--color-accent-500) 56%, var(--color-brand-700));
+.constellation-node--podium .constellation-node__shape {
+  border-color: rgba(0, 229, 255, 0.65);
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.22);
 }
 
-.constellation-node--central .constellation-node__label {
-  max-width: none;
-  font-size: 28px;
-  letter-spacing: 0;
-}
-
-.constellation-node__ring {
-  position: absolute;
-  inset: -7px;
-  border-radius: inherit;
-  background: conic-gradient(from 90deg, var(--color-brand-500), var(--color-accent-500), var(--color-brand-500));
-  animation: constellation-ring 20s linear infinite;
-}
-
-.constellation-node__ring::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: inherit;
-  background: var(--color-surface-900);
-}
-
-.constellation-node--person {
-  --node-color: var(--color-brand-500);
-}
-
-.constellation-node--backend {
-  --node-color: var(--color-brand-500);
-}
-
-.constellation-node--ai-ml {
-  --node-color: var(--color-accent-500);
-}
-
-.constellation-node--infra {
-  --node-color: var(--color-infra-500, oklch(0.70 0.15 200));
-}
-
-.constellation-node--frontend {
-  --node-color: var(--color-frontend-500, oklch(0.70 0.18 50));
-}
-
-@keyframes constellation-ring {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes constellation-vibration {
-  0%, 100% { transform: translate(-50%, -50%) scale(var(--node-scale)) rotate(0deg); }
-  25% { transform: translate(calc(-50% + 1px), calc(-50% - 1px)) scale(var(--node-scale)) rotate(-0.5deg); }
-  50% { transform: translate(calc(-50% - 1px), calc(-50% + 1px)) scale(var(--node-scale)) rotate(0.45deg); }
-  75% { transform: translate(calc(-50% + 0.5px), calc(-50% + 1px)) scale(var(--node-scale)) rotate(-0.25deg); }
-}
-
-@keyframes constellation-top-pulse {
-  0% {
-    opacity: 0.48;
-    transform: scale(0.88);
-  }
-  68%, 100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
+@keyframes constellation-node-pulse {
+  0% { opacity: 0.55; transform: scale(0.9); }
+  60%, 100% { opacity: 0; transform: scale(1.4); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .constellation-node,
-  .constellation-node__ring,
-  .constellation-node::after {
+  .constellation-node__shape {
     animation: none !important;
     transition: none !important;
   }

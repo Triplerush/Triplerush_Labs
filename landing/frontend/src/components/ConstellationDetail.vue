@@ -1,791 +1,561 @@
 <template>
-  <div class="constellation-detail" role="dialog" aria-modal="true" :aria-labelledby="titleId" @keydown.esc.stop="$emit('close')">
-    <div class="constellation-detail__backdrop" @click="$emit('close')"></div>
-    <article ref="panelRef" class="constellation-detail__panel" tabindex="-1">
-      <header class="constellation-detail__header">
-        <div>
-          <p class="constellation-detail__eyebrow">{{ eyebrow }}</p>
-          <h2 :id="titleId">{{ node.name }}</h2>
+  <div class="detail" role="dialog" aria-modal="false" :aria-labelledby="titleId" @keydown.esc.stop="$emit('close')">
+    <div class="detail__backdrop" @click="$emit('close')"></div>
+    <article ref="panelRef" class="detail__panel" tabindex="-1">
+      <header class="detail__header">
+        <div class="detail__title-block">
+          <p class="detail__eyebrow">{{ eyebrow }}</p>
+          <h2 :id="titleId" class="detail__title">{{ node.name }}</h2>
+          <p v-if="subtitleLine" class="detail__subtitle">{{ subtitleLine }}</p>
         </div>
-        <button type="button" class="constellation-detail__close" aria-label="Cerrar detalle" @click="$emit('close')">
+        <button
+          type="button"
+          class="detail__close"
+          aria-label="Cerrar detalle"
+          @click="$emit('close')"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </header>
 
-      <p class="constellation-detail__summary">{{ summary }}</p>
+      <div class="detail__body">
+        <a
+          v-if="isProject && node.data?.url"
+          class="detail__cta"
+          :href="node.data.url"
+          target="_self"
+        >
+          <span>Abrir demo</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 17L17 7M9 7h8v8" />
+          </svg>
+        </a>
 
-      <div v-if="scoreLabel" class="constellation-detail__score">
-        Coincidencia semántica <strong>{{ scoreLabel }}</strong>
+        <p v-if="summary" class="detail__summary">{{ summary }}</p>
+
+        <div v-if="scoreLabel || statusBadge" class="detail__badges">
+          <span v-if="scoreLabel" class="detail__badge detail__badge--score">
+            Coincidencia <strong>{{ scoreLabel }}</strong>
+          </span>
+          <span v-if="statusBadge" class="detail__badge" :class="`detail__badge--${statusBadge.tone}`">
+            {{ statusBadge.label }}
+          </span>
+        </div>
+
+        <section v-if="highlights.length" class="detail__section">
+          <h3>{{ highlightsTitle }}</h3>
+          <ul>
+            <li v-for="item in highlights" :key="item">{{ item }}</li>
+          </ul>
+        </section>
+
+        <section v-if="demonstrates.length" class="detail__section">
+          <h3>Demuestra</h3>
+          <div class="detail__chips">
+            <span v-for="item in demonstrates" :key="item" class="detail__chip">{{ item }}</span>
+          </div>
+        </section>
+
+        <section v-if="stack.length" class="detail__section">
+          <h3>Stack</h3>
+          <div class="detail__chips">
+            <span v-for="item in stack" :key="item" class="detail__chip detail__chip--mono">{{ item }}</span>
+          </div>
+        </section>
+
+        <section v-if="languages.length" class="detail__section">
+          <h3>Idiomas</h3>
+          <div class="detail__chips">
+            <span v-for="item in languages" :key="item" class="detail__chip">{{ item }}</span>
+          </div>
+        </section>
+
+        <section v-if="roadmap.length" class="detail__section">
+          <h3>Roadmap de carrera</h3>
+          <ul class="detail__roadmap">
+            <li v-for="item in roadmap" :key="item">{{ item }}</li>
+          </ul>
+        </section>
+
+        <section v-if="contactLinks.length" class="detail__section">
+          <h3>Contacto</h3>
+          <ul class="detail__contact">
+            <li v-for="entry in contactLinks" :key="entry.key">
+              <span class="detail__contact-key">{{ entry.label }}</span>
+              <a v-if="entry.href" :href="entry.href">{{ entry.value }}</a>
+              <span v-else>{{ entry.value }}</span>
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="relatedNodes.length" class="detail__section">
+          <h3>Nodos conectados</h3>
+          <div class="detail__related">
+            <button
+              v-for="related in relatedNodes"
+              :key="related.id"
+              type="button"
+              class="detail__related-chip"
+              @click="$emit('navigate', related.id)"
+            >
+              <span class="detail__related-type">{{ relatedTypeLabel(related) }}</span>
+              <span class="detail__related-name">{{ related.name }}</span>
+            </button>
+          </div>
+        </section>
       </div>
-
-      <dl v-if="metadataEntries.length" class="constellation-detail__metadata" aria-label="Datos principales">
-        <template v-for="[key, value] in metadataEntries" :key="key">
-          <dt>{{ key }}</dt>
-          <dd>{{ value }}</dd>
-        </template>
-      </dl>
-
-      <section v-if="highlights.length" class="constellation-detail__section">
-        <h3>Detalle completo</h3>
-        <ul>
-          <li v-for="item in highlights" :key="item">{{ item }}</li>
-        </ul>
-      </section>
-
-      <section v-if="demonstrates.length" class="constellation-detail__section">
-        <h3>Demuestra</h3>
-        <div class="constellation-detail__stack">
-          <span v-for="item in demonstrates" :key="item">{{ item }}</span>
-        </div>
-      </section>
-
-      <section v-if="stack.length" class="constellation-detail__section">
-        <h3>Stack</h3>
-        <div class="constellation-detail__stack">
-          <span v-for="item in stack" :key="item">{{ item }}</span>
-        </div>
-      </section>
-
-      <section v-if="contactEntries.length" class="constellation-detail__section">
-        <h3>Contacto</h3>
-        <dl class="constellation-detail__contact">
-          <template v-for="[key, value] in contactEntries" :key="key">
-            <dt>{{ key }}</dt>
-            <dd>{{ value }}</dd>
-          </template>
-        </dl>
-      </section>
-
-      <a v-if="node.data?.url" class="constellation-detail__link" :href="node.data.url">
-        Abrir proyecto
-      </a>
-
-      <section class="constellation-detail__chat" aria-labelledby="constellation-detail-chat-title">
-        <div class="constellation-detail__chat-header">
-          <div>
-            <h3 id="constellation-detail-chat-title">Preguntar sobre este nodo</h3>
-            <p>El contexto de {{ node.name }} se adjunta a cada mensaje.</p>
-          </div>
-          <button
-            type="button"
-            class="constellation-detail__chat-clear"
-            :disabled="chatMessages.length === 0 && !chatError"
-            @click="clearChat"
-          >
-            Limpiar
-          </button>
-        </div>
-
-        <div ref="chatLogRef" class="constellation-detail__chat-log" role="log" aria-live="polite" aria-label="Conversación contextual">
-          <p v-if="chatMessages.length === 0" class="constellation-detail__chat-empty">
-            Haz una pregunta concreta sobre relevancia, stack, experiencia o cómo se conecta con tu búsqueda.
-          </p>
-
-          <div
-            v-for="(message, index) in chatMessages"
-            :key="`${message.role}-${index}`"
-            class="constellation-detail__chat-message"
-            :class="`constellation-detail__chat-message--${message.role}`"
-          >
-            <span class="constellation-detail__chat-role">{{ message.role === 'user' ? 'Tú' : 'AI' }}</span>
-            <p>{{ message.content || '...' }}</p>
-          </div>
-
-          <div v-if="isChatStreaming" class="constellation-detail__chat-thinking" aria-label="Generando respuesta">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </div>
-
-        <p v-if="chatError" class="constellation-detail__chat-error" role="alert">{{ chatError }}</p>
-
-        <form class="constellation-detail__chat-form" @submit.prevent="submitChat">
-          <label class="sr-only" :for="chatInputId">Pregunta contextual</label>
-          <textarea
-            :id="chatInputId"
-            ref="chatInputRef"
-            v-model="chatInput"
-            rows="2"
-            maxlength="500"
-            :disabled="isChatStreaming"
-            placeholder="Ej. ¿Por qué este proyecto es relevante para RAG en producción?"
-            @keydown="handleChatKeydown"
-          ></textarea>
-          <button type="submit" :disabled="!chatInput.trim() || isChatStreaming">
-            Enviar
-          </button>
-        </form>
-      </section>
     </article>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { gsap } from 'gsap'
 
 const props = defineProps({
   node: { type: Object, required: true },
+  relatedNodes: { type: Array, default: () => [] },
   reducedMotion: { type: Boolean, default: false },
 })
 
-defineEmits(['close'])
+defineEmits(['close', 'navigate'])
 
 const panelRef = ref(null)
-const chatLogRef = ref(null)
-const chatInputRef = ref(null)
-const chatInput = ref('')
-const chatMessages = ref([])
-const isChatStreaming = ref(false)
-const chatError = ref('')
-const titleId = computed(() => `constellation-detail-${props.node.id}`)
-const chatInputId = computed(() => `constellation-detail-chat-${props.node.id}`)
-let abortController = null
-let chatRequestId = 0
+const titleId = computed(() => `detail-${props.node.id}`)
+
+const isProject = computed(() => props.node.type === 'project')
 
 const eyebrow = computed(() => {
   if (props.node.is_central) return 'Perfil central'
-  if (props.node.type === 'project') return 'Proyecto'
-  if (props.node.type?.includes('education')) return 'Formación'
-  return 'Experiencia'
+  switch (props.node.type) {
+    case 'project': return 'Proyecto'
+    case 'experience': return 'Experiencia'
+    case 'education': return 'Formación'
+    case 'skill': return 'Skills'
+    default: return 'Nodo'
+  }
 })
 
-const summary = computed(() => props.node.data?.summary || props.node.data?.description || 'Detalle de la constelación semántica.')
+const subtitleLine = computed(() => {
+  const data = props.node.data || {}
+  const parts = []
+  if (props.node.is_central && data.role) parts.push(data.role)
+  if (data.company) parts.push(data.company)
+  if (data.institution && !parts.length) parts.push(data.institution)
+  if (data.period) parts.push(data.period)
+  if (data.location && parts.length < 3) parts.push(data.location)
+  return parts.join(' · ')
+})
+
+const summary = computed(() => props.node.data?.summary || props.node.data?.description || '')
 const highlights = computed(() => props.node.data?.highlights || [])
 const stack = computed(() => props.node.data?.stack || [])
 const demonstrates = computed(() => props.node.data?.demonstrates || [])
+const languages = computed(() => props.node.data?.languages || [])
+const roadmap = computed(() => props.node.data?.roadmap || [])
 const scoreLabel = computed(() => typeof props.node.score === 'number' ? props.node.score.toFixed(2) : '')
-const contactEntries = computed(() => Object.entries(props.node.data?.contact || {}))
 
-const nodeContext = computed(() => {
-  const data = props.node.data || {}
-  const context = [
-    `Nombre: ${props.node.name}`,
-    `Tipo: ${eyebrow.value}`,
-    props.node.category ? `Categoria: ${props.node.category}` : '',
-    typeof props.node.score === 'number' ? `Score semantico: ${props.node.score.toFixed(2)}` : '',
-    data.summary || data.description ? `Resumen: ${data.summary || data.description}` : '',
-    data.role ? `Rol: ${data.role}` : '',
-    data.company ? `Empresa: ${data.company}` : '',
-    data.period ? `Periodo: ${data.period}` : '',
-    data.status ? `Estado: ${data.status}` : '',
-    highlights.value.length ? `Highlights: ${highlights.value.join('; ')}` : '',
-    demonstrates.value.length ? `Demuestra: ${demonstrates.value.join(', ')}` : '',
-    stack.value.length ? `Stack: ${stack.value.join(', ')}` : '',
-    data.url ? `URL: ${data.url}` : '',
-  ].filter(Boolean)
-
-  return context.join('\n')
+const highlightsTitle = computed(() => {
+  switch (props.node.type) {
+    case 'experience': return 'Trayectoria'
+    case 'project': return 'Highlights'
+    case 'education': return 'Formación'
+    case 'skill': return 'Capacidades'
+    default: return 'Highlights'
+  }
 })
 
-const metadataEntries = computed(() => {
-  const data = props.node.data || {}
+const statusBadge = computed(() => {
+  const status = props.node.data?.status
+  if (!status) return null
+  if (status === 'live') return { label: 'Live', tone: 'live' }
+  if (status === 'wip') return { label: 'WIP', tone: 'wip' }
+  return { label: status, tone: 'neutral' }
+})
+
+const contactLinks = computed(() => {
+  const contact = props.node.data?.contact
+  if (!contact) return []
   const entries = []
-
-  if (props.node.type) entries.push(['Tipo', eyebrow.value])
-  if (props.node.category) entries.push(['Categoría', props.node.category])
-  if (data.role) entries.push(['Rol', data.role])
-  if (data.company) entries.push(['Empresa', data.company])
-  if (data.period) entries.push(['Periodo', data.period])
-  if (data.status) entries.push(['Estado', data.status.toUpperCase()])
-  if (data.location) entries.push(['Ubicación', data.location])
-
+  if (contact.email) entries.push({ key: 'email', label: 'Email', value: contact.email, href: `mailto:${contact.email}` })
+  if (contact.phone) entries.push({ key: 'phone', label: 'Teléfono', value: contact.phone, href: `tel:${contact.phone.replace(/\s+/g, '')}` })
+  if (contact.linkedin) entries.push({ key: 'linkedin', label: 'LinkedIn', value: contact.linkedin, href: `https://${contact.linkedin.replace(/^https?:\/\//, '')}` })
+  if (contact.github) entries.push({ key: 'github', label: 'GitHub', value: contact.github, href: `https://${contact.github.replace(/^https?:\/\//, '')}` })
+  if (contact.location) entries.push({ key: 'location', label: 'Ubicación', value: contact.location, href: '' })
   return entries
 })
 
-const scrollChatToBottom = () => {
-  nextTick(() => {
-    if (!chatLogRef.value) return
-    chatLogRef.value.scrollTop = chatLogRef.value.scrollHeight
-  })
-}
-
-const handleChatKeydown = (event) => {
-  if (event.key !== 'Enter' || event.shiftKey) return
-  event.preventDefault()
-  submitChat()
-}
-
-const clearChat = () => {
-  chatRequestId += 1
-  abortController?.abort()
-  abortController = null
-  chatInput.value = ''
-  chatMessages.value = []
-  isChatStreaming.value = false
-  chatError.value = ''
-}
-
-const buildNodeContextMessage = () => {
-  return [
-    'Contexto del nodo seleccionado en la constelación del portfolio:',
-    nodeContext.value,
-    'Usa este contexto para responder las siguientes preguntas. Si falta información, dilo brevemente y no inventes datos.',
-  ].join('\n')
-}
-
-const submitChat = async () => {
-  const visibleMessage = chatInput.value.trim()
-  if (!visibleMessage || isChatStreaming.value) return
-
-  chatInput.value = ''
-  chatError.value = ''
-  chatMessages.value.push({ role: 'user', content: visibleMessage })
-
-  const visibleHistory = chatMessages.value
-    .slice(-9, -1)
-    .map((message) => ({ role: message.role, content: message.content }))
-
-  const history = [
-    ...visibleHistory.slice(-4),
-    { role: 'user', content: buildNodeContextMessage() },
-    { role: 'assistant', content: `Entendido. Responderé sobre ${props.node.name} usando ese contexto.` },
-  ]
-
-  const assistantIndex = chatMessages.value.length
-  chatMessages.value.push({ role: 'assistant', content: '' })
-  isChatStreaming.value = true
-  scrollChatToBottom()
-  let requestId = 0
-
-  try {
-    abortController?.abort()
-    requestId = chatRequestId + 1
-    chatRequestId = requestId
-    abortController = new AbortController()
-
-    const response = await fetch('/v1/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: visibleMessage, history }),
-      signal: abortController.signal,
-    })
-
-    if (requestId !== chatRequestId) return
-
-    if (response.status === 429) {
-      chatMessages.value.splice(assistantIndex, 1)
-      chatError.value = 'Demasiados mensajes seguidos. Espera un momento e intenta de nuevo.'
-      return
-    }
-
-    if (!response.ok || !response.body) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (requestId !== chatRequestId) return
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (!data) continue
-
-        try {
-          const event = JSON.parse(data)
-          if (event.type === 'token') {
-            chatMessages.value[assistantIndex].content += event.content
-            scrollChatToBottom()
-          } else if (event.type === 'error') {
-            chatError.value = event.message || 'Error al generar la respuesta.'
-          }
-        } catch {
-          // Ignore malformed SSE fragments.
-        }
-      }
-    }
-
-    if (requestId !== chatRequestId) return
-
-    if (!chatMessages.value[assistantIndex]?.content) {
-      chatMessages.value[assistantIndex].content = 'No pude generar una respuesta para este nodo.'
-    }
-  } catch (error) {
-    if (error.name === 'AbortError') return
-    if (assistantIndex >= chatMessages.value.length) return
-    if (chatMessages.value[assistantIndex]?.content === '') {
-      chatMessages.value.splice(assistantIndex, 1)
-    }
-    chatError.value = 'No pude conectar con el chat contextual.'
-  } finally {
-    if (requestId === chatRequestId) {
-      isChatStreaming.value = false
-      abortController = null
-      scrollChatToBottom()
-    }
+const relatedTypeLabel = (node) => {
+  if (node.is_central) return 'Persona'
+  switch (node.type) {
+    case 'project': return 'Proyecto'
+    case 'experience': return 'Experiencia'
+    case 'education': return 'Formación'
+    case 'skill': return 'Skills'
+    default: return 'Nodo'
   }
 }
-
-watch(() => props.node.id, () => {
-  clearChat()
-})
-
-watch(chatMessages, scrollChatToBottom, { deep: true })
 
 onMounted(async () => {
   await nextTick()
   panelRef.value?.focus()
 
   if (!props.reducedMotion) {
-    gsap.fromTo(panelRef.value, { opacity: 0, scale: 0.96, y: 18 }, { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: 'power3.out' })
+    gsap.fromTo(
+      panelRef.value,
+      { opacity: 0, x: 24 },
+      { opacity: 1, x: 0, duration: 0.36, ease: 'power3.out' },
+    )
   }
-})
-
-onBeforeUnmount(() => {
-  chatRequestId += 1
-  abortController?.abort()
 })
 </script>
 
 <style scoped>
-.constellation-detail {
+.detail {
   position: fixed;
   inset: 0;
   z-index: 10020;
-  display: grid;
-  place-items: center;
-  padding: 18px;
+  pointer-events: none;
 }
 
-.constellation-detail__backdrop {
+.detail__backdrop {
   position: absolute;
   inset: 0;
-  background: oklch(0.05 0.01 250 / 0.72);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  pointer-events: auto;
 }
 
-.constellation-detail__panel {
-  position: relative;
-  width: min(920px, 100%);
-  max-height: calc(100dvh - 36px);
+.detail__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100%);
+  border-left: 1px solid var(--color-border);
+  background: rgba(8, 9, 11, 0.92);
+  backdrop-filter: blur(18px);
+  color: var(--color-text);
+  pointer-events: auto;
   overflow: auto;
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-radius: 18px;
-  background: oklch(0.13 0.02 250 / 0.94);
-  box-shadow: 0 30px 120px oklch(0 0 0 / 0.46);
-  color: oklch(0.94 0.01 250);
-  padding: 26px;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
-.constellation-detail__panel:focus {
+.detail__panel:focus {
   outline: none;
 }
 
-.constellation-detail__header {
+.detail__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(8, 9, 11, 0.92);
+  backdrop-filter: blur(18px);
 }
 
-.constellation-detail__eyebrow {
-  margin: 0 0 6px;
-  color: var(--color-brand-300);
-  font-family: var(--font-mono);
+.detail__title-block {
+  min-width: 0;
+}
+
+.detail__eyebrow {
+  margin: 0 0 8px;
+  color: var(--color-accent);
   font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-.constellation-detail h2 {
+.detail__title {
   margin: 0;
-  font-size: clamp(24px, 4vw, 38px);
-  line-height: 1.04;
-  font-weight: 900;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
-.constellation-detail__close {
+.detail__subtitle {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.detail__close {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-radius: 12px;
-  background: oklch(1 0 0 / 0.04);
-  color: white;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text);
   cursor: pointer;
+  transition: border-color 200ms var(--constellation-ease-out);
+  flex-shrink: 0;
 }
 
-.constellation-detail__close svg {
-  width: 18px;
-  height: 18px;
+.detail__close:hover {
+  border-color: var(--color-accent);
+}
+
+.detail__close:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.detail__close svg {
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-width: 2;
 }
 
-.constellation-detail__close:focus-visible,
-.constellation-detail__link:focus-visible {
-  outline: 2px solid var(--color-brand-400);
-  outline-offset: 2px;
+.detail__body {
+  padding: 20px 24px 32px;
 }
 
-.constellation-detail__summary {
-  margin: 22px 0 0;
-  color: oklch(0.88 0.01 250 / 0.82);
-  font-size: 15px;
-  line-height: 1.7;
+.detail__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 22px;
+  padding: 14px 18px;
+  border: 1px solid var(--color-accent);
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.06);
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 200ms ease;
 }
 
-.constellation-detail__score {
-  width: fit-content;
-  margin-top: 18px;
-  padding: 8px 12px;
-  border: 1px solid oklch(1 0 0 / 0.10);
-  border-radius: 999px;
-  background: oklch(0.65 0.20 250 / 0.18);
-  font-size: 13px;
+.detail__cta:hover {
+  background: rgba(0, 229, 255, 0.14);
 }
 
-.constellation-detail__metadata {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 8px 14px;
-  margin: 20px 0 0;
-  padding: 14px;
-  border: 1px solid oklch(1 0 0 / 0.08);
-  border-radius: 14px;
-  background: oklch(1 0 0 / 0.04);
-  font-size: 13px;
+.detail__cta svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.6;
 }
 
-.constellation-detail__metadata dt {
-  color: oklch(0.90 0.01 250 / 0.55);
-  font-weight: 800;
+.detail__summary {
+  margin: 0 0 18px;
+  color: rgba(245, 247, 250, 0.84);
+  font-size: 14px;
+  line-height: 1.65;
 }
 
-.constellation-detail__metadata dd {
-  margin: 0;
-  color: oklch(0.92 0.01 250 / 0.86);
-}
-
-.constellation-detail__section {
-  margin-top: 24px;
-}
-
-.constellation-detail__section h3 {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: oklch(0.90 0.01 250 / 0.72);
-}
-
-.constellation-detail__section ul {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding-left: 20px;
-  color: oklch(0.88 0.01 250 / 0.82);
-  line-height: 1.55;
-}
-
-.constellation-detail__stack {
+.detail__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
-.constellation-detail__stack span {
-  padding: 5px 9px;
-  border: 1px solid oklch(1 0 0 / 0.10);
-  border-radius: 999px;
-  background: oklch(1 0 0 / 0.05);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.constellation-detail__contact {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 8px 14px;
-  margin: 0;
-  font-size: 14px;
-}
-
-.constellation-detail__contact dt {
-  color: oklch(0.90 0.01 250 / 0.55);
-}
-
-.constellation-detail__contact dd {
-  margin: 0;
-}
-
-.constellation-detail__link {
-  display: inline-flex;
-  margin-top: 26px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
-  color: white;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.constellation-detail__chat {
-  display: grid;
-  gap: 12px;
-  margin-top: 26px;
-  padding: 16px;
-  border: 1px solid oklch(1 0 0 / 0.10);
-  border-radius: 16px;
-  background: oklch(1 0 0 / 0.035);
-}
-
-.constellation-detail__chat-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.constellation-detail__chat h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 900;
-  text-transform: uppercase;
-  color: oklch(0.90 0.01 250 / 0.78);
-}
-
-.constellation-detail__chat-header p {
-  margin: 5px 0 0;
-  color: oklch(0.88 0.01 250 / 0.58);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.constellation-detail__chat-clear {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-radius: 10px;
-  background: oklch(1 0 0 / 0.04);
-  color: oklch(0.92 0.01 250);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.constellation-detail__chat-clear:disabled {
-  cursor: not-allowed;
-  opacity: 0.42;
-}
-
-.constellation-detail__chat-log {
-  display: grid;
-  gap: 10px;
-  min-height: 132px;
-  max-height: 260px;
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid oklch(1 0 0 / 0.08);
-  border-radius: 14px;
-  background: oklch(0.08 0.015 250 / 0.54);
-  scrollbar-gutter: stable;
-}
-
-.constellation-detail__chat-empty {
-  align-self: center;
-  margin: 0;
-  color: oklch(0.88 0.01 250 / 0.52);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.constellation-detail__chat-message {
-  display: grid;
-  gap: 4px;
-  max-width: min(78%, 560px);
-}
-
-.constellation-detail__chat-message--user {
-  justify-self: end;
-}
-
-.constellation-detail__chat-role {
-  color: oklch(0.88 0.01 250 / 0.50);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.constellation-detail__chat-message--user .constellation-detail__chat-role {
-  justify-self: end;
-}
-
-.constellation-detail__chat-message p {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid oklch(1 0 0 / 0.08);
-  border-radius: 14px;
-  background: oklch(1 0 0 / 0.06);
-  color: oklch(0.90 0.01 250 / 0.88);
-  font-size: 13px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-
-.constellation-detail__chat-message--user p {
-  border-color: oklch(0.55 0.20 250 / 0.34);
-  background: oklch(0.55 0.20 250 / 0.22);
-  color: white;
-}
-
-.constellation-detail__chat-thinking {
+.detail__badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  width: fit-content;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: oklch(1 0 0 / 0.06);
-}
-
-.constellation-detail__chat-thinking span {
-  width: 7px;
-  height: 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: var(--color-brand-300);
-  animation: constellation-detail-thinking 1100ms ease-in-out infinite;
-  opacity: 0.52;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
 }
 
-.constellation-detail__chat-thinking span:nth-child(2) {
-  animation-delay: 140ms;
+.detail__badge--score {
+  border-color: var(--color-border-strong);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--color-accent);
 }
 
-.constellation-detail__chat-thinking span:nth-child(3) {
-  animation-delay: 280ms;
+.detail__badge--live {
+  border-color: rgba(64, 220, 130, 0.40);
+  background: rgba(64, 220, 130, 0.06);
+  color: rgba(120, 232, 165, 1);
 }
 
-.constellation-detail__chat-error {
-  margin: 0;
-  padding: 9px 11px;
-  border: 1px solid oklch(0.65 0.20 25 / 0.24);
-  border-radius: 12px;
-  background: oklch(0.30 0.12 25 / 0.20);
-  color: oklch(0.88 0.08 35);
-  font-size: 12px;
+.detail__badge--wip {
+  border-color: rgba(255, 196, 80, 0.40);
+  background: rgba(255, 196, 80, 0.06);
+  color: rgba(255, 220, 140, 1);
 }
 
-.constellation-detail__chat-form {
+.detail__section {
+  margin-top: 22px;
+}
+
+.detail__section h3 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.detail__section ul {
   display: grid;
-  grid-template-columns: 1fr auto;
   gap: 10px;
-  align-items: end;
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(245, 247, 250, 0.86);
+  line-height: 1.55;
+  font-size: 13px;
 }
 
-.constellation-detail__chat-form textarea {
-  width: 100%;
-  min-height: 50px;
-  max-height: 120px;
-  resize: vertical;
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-radius: 12px;
-  background: oklch(0.08 0.015 250 / 0.62);
-  color: oklch(0.94 0.01 250);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.45;
+.detail__section ul li::marker {
+  color: var(--color-accent);
+}
+
+.detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail__chip {
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 11px;
+}
+
+.detail__chip--mono {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+}
+
+.detail__roadmap {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail__roadmap li {
   padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(245, 247, 250, 0.86);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.detail__contact {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail__contact li {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.detail__contact-key {
+  color: var(--color-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detail__contact a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 200ms ease;
+  word-break: break-word;
+}
+
+.detail__contact a:hover,
+.detail__contact a:focus-visible {
+  border-bottom-color: var(--color-accent);
+}
+
+.detail__related {
+  display: grid;
+  gap: 6px;
+}
+
+.detail__related-chip {
+  display: grid;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 200ms var(--constellation-ease-out),
+              background 200ms var(--constellation-ease-out);
+}
+
+.detail__related-chip:hover,
+.detail__related-chip:focus-visible {
+  border-color: var(--color-accent);
+  background: rgba(0, 229, 255, 0.04);
   outline: none;
 }
 
-.constellation-detail__chat-form textarea::placeholder {
-  color: oklch(0.88 0.01 250 / 0.38);
+.detail__related-type {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
-.constellation-detail__chat-form button {
-  min-height: 50px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
-  color: white;
+.detail__related-name {
   font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.constellation-detail__chat-form button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.constellation-detail__chat-clear:focus-visible,
-.constellation-detail__chat-form textarea:focus-visible,
-.constellation-detail__chat-form button:focus-visible {
-  outline: 2px solid var(--color-brand-400);
-  outline-offset: 2px;
-}
-
-@keyframes constellation-detail-thinking {
-  0%, 70%, 100% {
-    transform: translateY(0);
-    opacity: 0.45;
-  }
-  35% {
-    transform: translateY(-5px);
-    opacity: 1;
-  }
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 @media (max-width: 767px) {
-  .constellation-detail {
-    align-items: end;
-    padding: 12px;
-  }
-
-  .constellation-detail__panel {
+  .detail__panel {
     width: 100%;
-    max-height: min(82dvh, calc(100dvh - 24px));
-    padding: 20px;
-    border-radius: 18px 18px 10px 10px;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    top: auto;
+    height: 80dvh;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
   }
 
-  .constellation-detail__header,
-  .constellation-detail__metadata,
-  .constellation-detail__contact {
+  .detail__contact li {
     grid-template-columns: 1fr;
-  }
-
-  .constellation-detail__chat-header,
-  .constellation-detail__chat-form {
-    grid-template-columns: 1fr;
-  }
-
-  .constellation-detail__chat-header {
-    display: grid;
-  }
-
-  .constellation-detail__chat-clear,
-  .constellation-detail__chat-form button {
-    width: 100%;
-  }
-
-  .constellation-detail__chat-message {
-    max-width: 92%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .constellation-detail__chat-thinking span {
-    animation: none;
   }
 }
 </style>

@@ -1,192 +1,130 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import { forceCenter, forceCollide, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force'
-
-const CENTRAL_POSITION = { x: 50, y: 48 }
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  forceX,
+  forceY,
+} from 'd3-force'
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-const scoreRadius = (score, stageSize) => {
-  const minDimension = Math.max(1, Math.min(stageSize.width, stageSize.height))
-  if (typeof score !== 'number') return minDimension * 0.32
-  return minDimension * (0.16 + (1 - clamp(score, 0, 1)) * 0.24)
+// Node radii (in px). Central is slightly larger than the others.
+// These match the visual diameters in ConstellationNode.vue (124 / 104).
+const NODE_RADIUS = {
+  person: 62,
+  skill: 52,
+  experience: 52,
+  project: 52,
+  education: 52,
 }
 
-const getStaticPosition = (node, index, total, stageSize) => {
-  if (node.is_central) return CENTRAL_POSITION
+const radiusFor = (node) => NODE_RADIUS[node.type] || 50
 
-  const angle = (-90 + index * (360 / Math.max(total, 1))) * (Math.PI / 180)
-  const radius = scoreRadius(node.score, stageSize)
-  const centerX = stageSize.width * 0.5
-  const centerY = stageSize.height * 0.48
+const buildEdges = (nodesList) => {
+  const seen = new Set()
+  const edges = []
+  const idSet = new Set(nodesList.map((node) => node.id))
 
-  return {
-    x: ((centerX + Math.cos(angle) * radius) / stageSize.width) * 100,
-    y: ((centerY + Math.sin(angle) * radius * 0.72) / stageSize.height) * 100,
+  for (const node of nodesList) {
+    const connections = node.data?.connections || node.connections || []
+    for (const targetId of connections) {
+      if (!idSet.has(targetId) || targetId === node.id) continue
+      const key = node.id < targetId ? `${node.id}|${targetId}` : `${targetId}|${node.id}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      edges.push({ source: node.id, target: targetId })
+    }
   }
+
+  return edges
 }
 
-const createScoreWindForce = (stageSize) => {
-  let simulationNodes = []
+// Assign each non-central node a fixed angular slot around the central node so
+// the orbit ring is evenly distributed regardless of link clustering.
+const computeAngularSlots = (nodesList) => {
+  const orbitNodes = nodesList.filter((n) => !n.is_central)
+  const slots = {}
+  const total = orbitNodes.length
+  if (!total) return slots
 
-  const force = (alpha) => {
-    const centerX = stageSize.value.width * 0.5
-    const centerY = stageSize.value.height * 0.48
-
-    simulationNodes.forEach((node) => {
-      if (node.is_central || node.fx !== null || node.fy !== null) return
-
-      const dx = node.x - centerX
-      const dy = node.y - centerY
-      const distance = Math.max(1, Math.hypot(dx, dy))
-      const ux = dx / distance
-      const uy = dy / distance
-      const normalizedScore = typeof node.score === 'number' ? clamp(node.score, 0, 1) : 0.5
-      const targetRadius = scoreRadius(node.score, stageSize.value)
-      const radialDelta = targetRadius - distance
-      const pullStrength = 0.006 + normalizedScore * 0.018
-      const lowScoreWind = Math.max(0, 0.58 - normalizedScore) * 0.075
-      const orbitWind = (0.5 - normalizedScore) * 0.018
-
-      node.vx += ux * radialDelta * pullStrength * alpha
-      node.vy += uy * radialDelta * pullStrength * alpha
-      node.vx += ux * lowScoreWind * alpha
-      node.vy += uy * lowScoreWind * alpha
-      node.vx += -uy * orbitWind * alpha
-      node.vy += ux * orbitWind * alpha
-    })
-  }
-
-  force.initialize = (nodes) => {
-    simulationNodes = nodes
-  }
-
-  return force
+  // Stable slot order — sort by id so initial positions don't shuffle on each
+  // refetch. Start angle at -90deg so the first node sits straight up.
+  const sorted = [...orbitNodes].sort((a, b) => a.id.localeCompare(b.id))
+  sorted.forEach((node, idx) => {
+    slots[node.id] = -Math.PI / 2 + (idx / total) * Math.PI * 2
+  })
+  return slots
 }
 
-export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
+const orbitRadius = (stageSize) => {
+  const minDim = Math.min(stageSize.width, stageSize.height)
+  // Larger graphs get more breathing room; clamp to keep things reasonable.
+  return clamp(minDim * 0.34, 180, 320)
+}
+
+const scoreOffset = (score, baseRadius) => {
+  // During search, top scorers drift inward, low scorers drift outward.
+  if (typeof score !== 'number') return baseRadius
+  const normalized = clamp(score, 0, 1)
+  // 0.0 → +30% (push out); 1.0 → -25% (pull in)
+  return baseRadius * (1 + (0.3 - normalized * 0.55))
+}
+
+export function useConstellationPhysics({ nodes, stageSize, reducedMotion, searchActive }) {
   const physicsNodes = shallowRef([])
   const positionMap = ref({})
-  const trailPoints = ref([])
-  const isCentralAgitated = ref(false)
+  const edges = shallowRef([])
   const simulation = shallowRef(null)
   let frameId = 0
   let draggedNodeId = ''
-  let lastTrailTime = 0
 
   const centralPosition = computed(() => {
-    const centralNode = physicsNodes.value.find((node) => node.is_central)
-    if (!centralNode || !stageSize.value.width || !stageSize.value.height) return CENTRAL_POSITION
+    const central = physicsNodes.value.find((node) => node.is_central)
+    if (!central || !stageSize.value.width) return { x: 50, y: 50 }
     return {
-      x: (centralNode.x / stageSize.value.width) * 100,
-      y: (centralNode.y / stageSize.value.height) * 100,
+      x: (central.x / stageSize.value.width) * 100,
+      y: (central.y / stageSize.value.height) * 100,
     }
   })
 
-  const staticPositionMap = computed(() => {
-    const map = {}
-    const orbitNodes = nodes.value
-      .filter((node) => !node.is_central)
-      .sort((a, b) => {
-        if (typeof a.score === 'number' || typeof b.score === 'number') return (b.score ?? -1) - (a.score ?? -1)
-        return a.name.localeCompare(b.name)
-      })
-
-    nodes.value.forEach((node) => {
-      if (node.is_central) map[node.id] = CENTRAL_POSITION
-    })
-
-    orbitNodes.forEach((node, index) => {
-      map[node.id] = getStaticPosition(node, index, orbitNodes.length, stageSize.value)
-    })
-
+  const edgeMap = computed(() => {
+    const map = new Map()
+    for (const edge of edges.value) {
+      const source = typeof edge.source === 'string' ? edge.source : edge.source.id
+      const target = typeof edge.target === 'string' ? edge.target : edge.target.id
+      if (!map.has(source)) map.set(source, new Set())
+      if (!map.has(target)) map.set(target, new Set())
+      map.get(source).add(target)
+      map.get(target).add(source)
+    }
     return map
   })
 
-  const getBoundaryPadding = () => stageSize.value.width < 768 ? 48 : 72
+  const connectedIds = (nodeId) => edgeMap.value.get(nodeId) || new Set()
+
+  const getBoundaryPadding = () => stageSize.value.width < 768 ? 64 : 96
 
   const clampPhysicsNode = (node) => {
-    const padding = Math.max(getBoundaryPadding(), node.radius || 48)
+    const padding = Math.max(getBoundaryPadding(), node.radius || 50)
     node.x = clamp(node.x, padding, stageSize.value.width - padding)
     node.y = clamp(node.y, padding, stageSize.value.height - padding)
-  }
-
-  const getTrailColor = (node) => {
-    const category = node.category || 'backend'
-    if (category === 'person' || category === 'backend') return 'var(--color-brand-500)'
-    if (category === 'ai-ml') return 'var(--color-accent-500)'
-    if (category === 'infra') return 'var(--color-infra-500, oklch(0.70 0.15 200))'
-    if (category === 'frontend') return 'var(--color-frontend-500, oklch(0.70 0.18 50))'
-    return 'var(--color-brand-500)'
-  }
-
-  const updateTrails = () => {
-    if (reducedMotion.value) {
-      trailPoints.value = []
-      return
-    }
-
-    const now = performance.now()
-    const maxAge = 420
-    const mobile = stageSize.value.width < 768
-    const maxPerNode = mobile ? 4 : 8
-    const nextTrailPoints = trailPoints.value
-      .map((point) => ({ ...point, age: now - point.createdAt }))
-      .filter((point) => point.age < maxAge)
-
-    if (now - lastTrailTime > 70) {
-      physicsNodes.value.forEach((node) => {
-        if (node.is_central || typeof node.score !== 'number' || node.score < 0.45) return
-        const speed = Math.hypot(node.vx || 0, node.vy || 0)
-        if (speed < 0.35 && draggedNodeId !== node.id) return
-
-        const countForNode = nextTrailPoints.filter((point) => point.nodeId === node.id).length
-        if (countForNode >= maxPerNode) return
-
-        nextTrailPoints.push({
-          id: `${node.id}-${Math.round(now)}-${countForNode}`,
-          nodeId: node.id,
-          x: (node.x / stageSize.value.width) * 100,
-          y: (node.y / stageSize.value.height) * 100,
-          color: getTrailColor(node),
-          createdAt: now,
-          age: 0,
-        })
-      })
-      lastTrailTime = now
-    }
-
-    trailPoints.value = nextTrailPoints.map((point) => ({
-      ...point,
-      opacity: Math.max(0, 1 - point.age / maxAge),
-    }))
   }
 
   const commitPositions = () => {
     if (!stageSize.value.width || !stageSize.value.height) return
 
-    const nextMap = {}
+    const next = {}
     physicsNodes.value.forEach((node) => {
-      if (node.is_central) {
-        node.x = stageSize.value.width * 0.5
-        node.y = stageSize.value.height * 0.48
-      } else {
-        clampPhysicsNode(node)
-      }
-
-      nextMap[node.id] = {
+      clampPhysicsNode(node)
+      next[node.id] = {
         x: (node.x / stageSize.value.width) * 100,
         y: (node.y / stageSize.value.height) * 100,
       }
     })
-    positionMap.value = nextMap
-    updateTrails()
-
-    const centralNode = physicsNodes.value.find((node) => node.is_central)
-    isCentralAgitated.value = Boolean(centralNode && physicsNodes.value.some((node) => {
-      if (node.is_central) return false
-      const distance = Math.hypot(node.x - centralNode.x, node.y - centralNode.y)
-      return distance < 150
-    }))
+    positionMap.value = next
   }
 
   const scheduleCommit = () => {
@@ -206,65 +144,94 @@ export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
     }
   }
 
+  const targetPositionFor = (node, slots, baseRadius, stageMid) => {
+    if (node.is_central) return { x: stageMid.cx, y: stageMid.cy }
+    const angle = slots[node.id] ?? 0
+    const radius = searchActive.value ? scoreOffset(node.score, baseRadius) : baseRadius
+    return {
+      x: stageMid.cx + Math.cos(angle) * radius,
+      y: stageMid.cy + Math.sin(angle) * radius,
+    }
+  }
+
   const rebuildSimulation = () => {
     stopSimulation()
 
-    if (!stageSize.value.width || !stageSize.value.height) {
-      positionMap.value = staticPositionMap.value
-      return
-    }
+    if (!stageSize.value.width || !stageSize.value.height) return
+
+    const cx = stageSize.value.width * 0.5
+    const cy = stageSize.value.height * 0.5
+    const stageMid = { cx, cy }
+    const slots = computeAngularSlots(nodes.value)
+    const baseRadius = orbitRadius(stageSize.value)
 
     if (reducedMotion.value) {
+      const nextPositions = {}
+      nodes.value.forEach((node) => {
+        const target = targetPositionFor(node, slots, baseRadius, stageMid)
+        nextPositions[node.id] = {
+          x: (target.x / stageSize.value.width) * 100,
+          y: (target.y / stageSize.value.height) * 100,
+        }
+      })
       physicsNodes.value = []
-      positionMap.value = staticPositionMap.value
-      trailPoints.value = []
-      isCentralAgitated.value = false
+      edges.value = buildEdges(nodes.value)
+      positionMap.value = nextPositions
       return
     }
 
-    const staticMap = staticPositionMap.value
+    const previousById = new Map(physicsNodes.value.map((node) => [node.id, node]))
     const nextNodes = nodes.value.map((node) => {
-      const previous = physicsNodes.value.find((candidate) => candidate.id === node.id)
-      const fallback = staticMap[node.id] || CENTRAL_POSITION
-      const x = previous?.x ?? (fallback.x / 100) * stageSize.value.width
-      const y = previous?.y ?? (fallback.y / 100) * stageSize.value.height
-      const radius = node.is_central ? 82 : node.type?.includes('experience') || node.type?.includes('education') ? 48 : 54
-      const padding = Math.max(stageSize.value.width < 768 ? 48 : 72, radius)
-
+      const previous = previousById.get(node.id)
+      const target = targetPositionFor(node, slots, baseRadius, stageMid)
+      const radius = radiusFor(node)
+      const isCentral = Boolean(node.is_central)
       return {
         ...node,
         radius,
-        x: clamp(x, padding, stageSize.value.width - padding),
-        y: clamp(y, padding, stageSize.value.height - padding),
-        fx: node.is_central ? stageSize.value.width * 0.5 : null,
-        fy: node.is_central ? stageSize.value.height * 0.48 : null,
+        slot: slots[node.id] ?? null,
+        x: previous?.x ?? target.x,
+        y: previous?.y ?? target.y,
+        vx: previous?.vx ?? 0,
+        vy: previous?.vy ?? 0,
+        fx: isCentral ? cx : null,
+        fy: isCentral ? cy : null,
       }
     })
 
+    const nextEdges = buildEdges(nextNodes)
     physicsNodes.value = nextNodes
+    edges.value = nextEdges
+
     simulation.value = forceSimulation(nextNodes)
-      .alpha(0.94)
-      .alphaDecay(0.018)
-      .velocityDecay(0.34)
-      .force('center', forceCenter(stageSize.value.width * 0.5, stageSize.value.height * 0.5).strength(0.04))
-      .force('charge', forceManyBody().strength((node) => node.is_central ? -190 : -92))
-      .force('collide', forceCollide().radius((node) => node.radius).strength(0.88).iterations(2))
-      .force('x', forceX((node) => {
-        if (node.is_central) return stageSize.value.width * 0.5
-        return (staticMap[node.id]?.x ?? 50) / 100 * stageSize.value.width
-      }).strength((node) => node.is_central ? 0.5 : 0.035))
-      .force('y', forceY((node) => {
-        if (node.is_central) return stageSize.value.height * 0.48
-        return (staticMap[node.id]?.y ?? 50) / 100 * stageSize.value.height
-      }).strength((node) => node.is_central ? 0.5 : 0.035))
-      .force('scoreWind', createScoreWindForce(stageSize))
+      .alpha(0.92)
+      .alphaDecay(0.026)
+      .velocityDecay(0.42)
+      // Light link force just to add a hint of pull between connected pairs
+      // — not strong enough to override the angular layout.
+      .force('link', forceLink(nextEdges)
+        .id((node) => node.id)
+        .distance(baseRadius)
+        .strength(0.06))
+      .force('charge', forceManyBody().strength((node) => node.is_central ? -200 : -120))
+      .force('collide', forceCollide().radius((node) => node.radius + 12).strength(0.96).iterations(2))
+      .force('center', forceCenter(cx, cy).strength(0.04))
+      // Strong target pull so each node sits at its angular slot.
+      .force('targetX', forceX((node) => {
+        if (node.is_central) return cx
+        return targetPositionFor(node, slots, baseRadius, stageMid).x
+      }).strength((node) => node.is_central ? 1 : 0.32))
+      .force('targetY', forceY((node) => {
+        if (node.is_central) return cy
+        return targetPositionFor(node, slots, baseRadius, stageMid).y
+      }).strength((node) => node.is_central ? 1 : 0.32))
       .on('tick', scheduleCommit)
 
     commitPositions()
   }
 
   const stagePointFromEvent = (event) => {
-    const rect = event.currentTarget.closest('.constellation-hero__stage')?.getBoundingClientRect()
+    const rect = event.currentTarget.closest('.hero__stage')?.getBoundingClientRect()
     if (!rect) return null
     const padding = getBoundaryPadding()
     return {
@@ -308,13 +275,24 @@ export function useConstellationPhysics({ nodes, stageSize, reducedMotion }) {
   }
 
   watch([nodes, stageSize, reducedMotion], rebuildSimulation, { immediate: true, deep: true })
+  watch(searchActive, () => {
+    if (!simulation.value) return
+    simulation.value.alpha(0.55).restart()
+  })
+
   onBeforeUnmount(stopSimulation)
 
   return {
     centralPosition,
     positionMap,
-    trailPoints,
-    isCentralAgitated,
+    edges,
+    edgeMap,
+    connectedIds,
+    nodeRadii: computed(() => {
+      const map = {}
+      physicsNodes.value.forEach((node) => { map[node.id] = node.radius })
+      return map
+    }),
     startDrag,
     drag,
     endDrag,

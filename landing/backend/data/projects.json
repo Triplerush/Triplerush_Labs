@@ -2,15 +2,20 @@
   {
     "id": "auto-profiling",
     "name": "Auto Profiling + AI Layer",
-    "description": "Plataforma que visualiza análisis de datos como dashboards interactivos con agente AI integrado",
+    "description": "Plataforma que visualiza análisis de datos como dashboards interactivos con un agente AI integrado que explica resultados en lenguaje natural.",
+    "summary": "Dashboards interactivos con agente AI, RAG sobre Data Contracts y Model Service con explicaciones LLM.",
     "url": "/profiling/",
     "status": "live",
+    "period": "2026 — Presente",
     "stack": ["FastAPI", "Vue 3", "Chart.js", "LangChain", "FAISS", "Docker"],
     "highlights": [
-      "Agente AI que explica dashboards en lenguaje natural",
-      "RAG sobre Data Contracts para búsqueda semántica",
-      "Model Service con predicciones + explicaciones LLM"
+      "Agente AI que explica dashboards en lenguaje natural sobre datos analíticos.",
+      "RAG sobre Data Contracts para búsqueda semántica de métricas y campos.",
+      "Model Service con predicciones y explicaciones LLM sobre cada inferencia.",
+      "Despliegue contenerizado con Docker y reverse proxy Nginx en VPS."
     ],
-    "demonstrates": ["RAG", "Agents", "Model Serving", "Full-stack", "MLOps"]
+    "demonstrates": ["RAG", "Agents", "Model Serving", "Full-stack", "MLOps"],
+    "category": "ai-ml",
+    "connections": ["fernando-canal", "skills", "experience"]
   }
 ]

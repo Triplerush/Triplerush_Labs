@@ -135,6 +135,18 @@ def _node_text(node: Node) -> str:
     if data.get("role"):
         text_parts.append(f"Rol: {data['role']}")
 
+    if data.get("company"):
+        text_parts.append(f"Empresa: {data['company']}")
+
+    if data.get("institution"):
+        text_parts.append(f"Institución: {data['institution']}")
+
+    if data.get("period"):
+        text_parts.append(f"Periodo: {data['period']}")
+
+    if data.get("location"):
+        text_parts.append(f"Ubicación: {data['location']}")
+
     description = data.get("description") or data.get("summary")
     if description:
         text_parts.append(f"Descripción: {description}")

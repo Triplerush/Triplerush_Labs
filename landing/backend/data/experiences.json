@@ -5,102 +5,92 @@
     "is_central": true,
     "name": "Fernando Rubén Canal Mendoza",
     "role": "AI Software Engineer",
-    "summary": "Ingeniero de software con base sólida en backend (Java/Spring Boot, Python/FastAPI) evolucionando hacia AI Engineering. Especializado en sistemas escalables sobre microservicios y monolitos modulares, APIs RESTful seguras y componentes desacoplados para entornos distribuidos. Experiencia en RAG, orquestación de LLMs con LangChain y despliegue de aplicaciones inteligentes con Docker/Kubernetes.",
+    "tagline": "Building AI that ships to production",
+    "summary": "Ingeniero de software con base sólida en backend (Java/Spring Boot, Python/FastAPI) evolucionando hacia AI Engineering. Especializado en sistemas escalables sobre microservicios y monolitos modulares, APIs RESTful seguras y componentes desacoplados para entornos distribuidos. Experiencia en RAG, orquestación de LLMs con LangChain y despliegue de aplicaciones inteligentes con Docker y Kubernetes.",
     "highlights": [
-      "AI Engineering aplicado: sistemas RAG en producción con embeddings, recuperación vectorial y orquestación de LLMs (LangChain, Haystack, OpenSearch).",
-      "Backend robusto en Python/FastAPI y Java/Spring Boot con APIs RESTful seguras, arquitectura por capas y patrones de diseño limpio.",
-      "MLOps y despliegue: Docker, Docker Compose, Kubernetes (EKS/AKS), AWS (EC2, RDS, Elastic Beanstalk) y pipelines CI/CD con GitHub Actions, Jenkins y Azure DevOps.",
-      "Foco en sistemas escalables y de alta disponibilidad: optimización vectorizada con NumPy/SciPy, control transaccional, idempotencia, rate limiting y connection pooling.",
-      "Bilingüe técnico (español nativo, inglés B2), basado en Arequipa, Perú, con vocación clara hacia AI Software Engineer / Applied ML Engineer."
+      "AI Engineering aplicado: sistemas RAG en producción con embeddings, recuperación vectorial y orquestación de LLMs.",
+      "Backend robusto en Python/FastAPI y Java/Spring Boot con APIs RESTful seguras y arquitectura por capas.",
+      "MLOps y despliegue: Docker, Kubernetes (EKS/AKS), AWS y pipelines CI/CD con GitHub Actions, Jenkins y Azure DevOps.",
+      "Optimización vectorizada con NumPy/SciPy, control transaccional, idempotencia y rate limiting en sistemas de alta disponibilidad."
+    ],
+    "languages": ["Español (nativo)", "Inglés (B2)"],
+    "roadmap": [
+      "Fase actual: AI Backend Engineer / Applied ML Engineer.",
+      "1–3 años: AI Software Engineer / MLOps Engineer (fine-tuning, agentes autónomos, continuous training).",
+      "3–5+ años: Principal AI Architect / AI Tech Lead (arquitecturas multimodelo, gobernanza de IA, liderazgo técnico)."
     ],
     "contact": {
       "email": "fernandorcm9@gmail.com",
       "phone": "+51 975160514",
       "linkedin": "www.linkedin.com/in/fcanalm",
+      "github": "github.com/triplerush",
       "location": "Arequipa, Perú"
     },
-    "category": "person"
+    "category": "person",
+    "connections": ["experience", "education", "skills", "auto-profiling"]
   },
   {
-    "id": "experiencia-laboral",
-    "type": "experience-bundle",
-    "name": "Experiencia Laboral",
+    "id": "experience",
+    "type": "experience",
+    "name": "Experiencia",
     "summary": "Trayectoria backend evolucionando hacia AI Engineering: arquitectura de sistemas escalables, optimización de pipelines de datos y construcción de soluciones RAG en producción sobre stacks Python/FastAPI y Java/Spring Boot.",
+    "period": "2024 — Presente",
     "highlights": [
-      "PHAXSI (Dic 2025 - Presente): refactor de monolito (~3,200 LOC) a arquitectura modular por dominios, pipeline geoespacial 10x más rápido vectorizando con NumPy/SciPy, microservicio de pagos multimoneda con patrón Adapter (USD/PEN, API SUNAT, idempotencia) y 275 pruebas unitarias + hardening (rate limiting, connection pooling). Stack: Python, FastAPI, SQLModel, Alembic, MySQL, Redis, Pytest, Locust, Docker, Vertex API, Mercado Pago.",
-      "Anyone AI (Jul - Nov 2025, Part Time): liderazgo técnico en sistema RAG para consultas de pólizas con OpenSearch + LangChain, modelos ML (regresión, clasificación, redes neuronales) con +15% accuracy y pipelines ETL de feature engineering. Stack: Python, Pandas, LangChain, Haystack, OpenSearch, FastAPI, NumPy, Scikit-Learn, TensorFlow, PyTorch, Docker, EC2, RDS, Elastic Beanstalk.",
-      "SmartPressure (Dic 2024 - Mar 2025, Freelance): API REST en Spring Boot para telemedicina con arquitectura estricta por capas, migraciones Flyway sobre PostgreSQL, procesamiento asíncrono de notificaciones médicas y cobertura de tests >85% con JUnit/Mockito. Stack: Java, Spring Boot 3, PostgreSQL, Flyway, Docker, JUnit.",
-      "Freelance backend (Set - Dic 2024): backend e-commerce escalable en Spring Boot (catálogo, carrito, pedidos), panel admin React con CRUD y dashboards en tiempo real, orquestación con Docker Compose y pipeline básico de CI. Stack: Java, Spring Boot, PostgreSQL, Hibernate/JPA, Docker, JUnit, Mockito, GitHub."
+      "PHAXSI · Backend & Software Engineer (Dic 2025 – Presente): refactor de un monolito a arquitectura modular por dominios, pipeline geoespacial 10× más rápido vectorizando con NumPy/SciPy, microservicio de pagos multimoneda con patrón Adapter (USD/PEN, API SUNAT, idempotencia) y 275 pruebas unitarias con hardening (rate limiting, connection pooling).",
+      "Anyone AI · Data Scientist Part Time (Jul – Nov 2025): liderazgo técnico en un sistema RAG para consultas de pólizas con OpenSearch + LangChain, modelos ML (regresión, clasificación, redes neuronales) con +15% accuracy y pipelines ETL de feature engineering.",
+      "SmartPressure · Backend Developer Freelance (Dic 2024 – Mar 2025): API REST en Spring Boot para telemedicina con arquitectura estricta por capas, migraciones Flyway sobre PostgreSQL, procesamiento asíncrono y cobertura de tests >85%.",
+      "Freelance e-commerce · Backend Developer (Sep – Dic 2024): backend escalable en Spring Boot (catálogo, carrito, pedidos), panel admin React con CRUD y dashboards en tiempo real, orquestación con Docker Compose y pipeline básico de CI."
     ],
     "stack": [
-      "Python",
-      "FastAPI",
-      "SQLModel",
-      "Alembic",
-      "Java",
-      "Spring Boot",
-      "Hibernate/JPA",
-      "PostgreSQL",
-      "MySQL",
-      "Redis",
-      "Flyway",
-      "LangChain",
-      "Haystack",
-      "OpenSearch",
-      "NumPy",
-      "SciPy",
-      "Pandas",
-      "Scikit-Learn",
-      "TensorFlow",
-      "PyTorch",
-      "Docker",
-      "AWS (EC2, RDS, Elastic Beanstalk)",
-      "Pytest",
-      "Locust",
-      "JUnit",
-      "Mockito"
+      "Python", "FastAPI", "SQLModel", "Alembic", "Java", "Spring Boot", "Hibernate/JPA",
+      "PostgreSQL", "MySQL", "Redis", "Flyway", "LangChain", "OpenSearch",
+      "NumPy", "SciPy", "Pandas", "Scikit-Learn", "TensorFlow", "PyTorch",
+      "Docker", "AWS (EC2, RDS, Elastic Beanstalk)", "Pytest", "Locust", "JUnit", "Mockito"
     ],
-    "category": "backend"
+    "demonstrates": ["RAG", "Backend modular", "Optimización vectorizada", "Concurrencia", "Hardening", "ML aplicado"],
+    "category": "experience",
+    "connections": ["fernando-canal", "skills", "auto-profiling"]
   },
   {
-    "id": "certificaciones-estudios",
-    "type": "education-bundle",
-    "name": "Certificaciones y Estudios",
-    "summary": "Formación mixta entre educación formal en Ingeniería de Sistemas y especialización continua en AI/ML, aprendizaje por refuerzo, agentes autónomos, aplicaciones LLM y DevOps multicloud, articulada como base técnica del perfil AI Software Engineer.",
+    "id": "education",
+    "type": "education",
+    "name": "Formación",
+    "summary": "Educación formal en Ingeniería de Sistemas en UNSA y especialización continua en AI/ML, aprendizaje por refuerzo, agentes autónomos, aplicaciones LLM y DevOps multicloud — la base técnica del perfil AI Software Engineer.",
+    "period": "2023 — 2025",
     "highlights": [
-      "Ingeniería de Sistemas - Universidad Nacional de San Agustín (UNSA), 2025: formación académica núcleo en arquitectura de sistemas, algoritmos y software engineering.",
-      "Aprendizaje por Refuerzo con Python - CODAERUS: MDPs, Programación Dinámica, Monte Carlo, SARSA, Q-Learning, Deep Q-Network (DQN), REINFORCE, A2C; base técnica para RLHF aplicado a LLMs.",
-      "Especialista en DevOps Multicloud - TecyLab (25 horas, abril 2025): DevSecOps, Docker, Kubernetes (EKS/AKS), CI/CD con Jenkins / GitHub Actions / Azure DevOps, IaC con Terraform, SonarQube y despliegues AWS + Azure.",
-      "Desarrollo de Soluciones de IA de Nueva Generación con Agentes - AnyoneAI, 2025: diseño de soluciones basadas en agentes autónomos.",
-      "Desarrollo de Aplicaciones basadas en LLMs - AnyoneAI, 2025: construcción de aplicaciones sobre modelos de lenguaje de gran escala.",
-      "Programación Senior con Spring Boot en Multicloud y Microservicios - TecyLab, 2024: desarrollo avanzado con Spring Boot, microservicios y despliegues multicloud.",
-      "Oracle Next Education F2 T4 Back-end - Alura Latam, 2023: formación intensiva en desarrollo backend con Java y Spring."
+      "Ingeniería de Sistemas — Universidad Nacional de San Agustín (UNSA), 2025: arquitectura de sistemas, algoritmos y software engineering.",
+      "Aprendizaje por Refuerzo con Python — CODAERUS, 2025: MDPs, Q-Learning, DQN, REINFORCE, A2C; base técnica para RLHF.",
+      "Especialista en DevOps Multicloud — TecyLab, abril 2025 (25 horas): Docker, Kubernetes (EKS/AKS), Jenkins, GitHub Actions, Azure DevOps, Terraform y SonarQube.",
+      "Soluciones de IA con Agentes Autónomos — AnyoneAI, 2025.",
+      "Aplicaciones basadas en LLMs — AnyoneAI, 2025.",
+      "Spring Boot en Multicloud y Microservicios — TecyLab, 2024.",
+      "Oracle Next Education F2 T4 Backend — Alura Latam, 2023."
     ],
     "stack": [
-      "Reinforcement Learning",
-      "MDPs",
-      "Q-Learning",
-      "DQN",
-      "REINFORCE",
-      "A2C",
-      "RLHF",
-      "Agentes autónomos",
-      "LLMs",
-      "LangChain",
-      "Docker",
-      "Kubernetes",
-      "Terraform",
-      "Jenkins",
-      "GitHub Actions",
-      "Azure DevOps",
-      "SonarQube",
-      "AWS",
-      "Azure",
-      "Spring Boot",
-      "Hibernate/JPA",
-      "Microservicios",
-      "Java"
+      "Reinforcement Learning", "Q-Learning", "DQN", "RLHF", "Agentes autónomos", "LLMs",
+      "Docker", "Kubernetes", "Terraform", "Jenkins", "Azure DevOps", "SonarQube",
+      "Spring Boot", "Microservicios", "Java"
     ],
-    "category": "ai-ml"
+    "category": "education",
+    "connections": ["fernando-canal", "skills"]
+  },
+  {
+    "id": "skills",
+    "type": "skill",
+    "name": "Skills",
+    "summary": "Stack completo para enviar sistemas inteligentes a producción: AI/ML, backend engineering, infraestructura/MLOps y frontend para visualización.",
+    "highlights": [
+      "AI · ML: RAG en producción, LangChain, Haystack, PyTorch, TensorFlow, Scikit-Learn, FAISS, ChromaDB, OpenSearch, Fine-tuning con LoRA/QLoRA, Sentence Transformers.",
+      "Backend: Python/FastAPI/Pydantic/SQLModel, Java/Spring Boot 3/Hibernate, APIs RESTful seguras, PostgreSQL/MySQL/Redis, Alembic/Flyway.",
+      "Infra · MLOps: Docker, Kubernetes (EKS/AKS), AWS (EC2, RDS, Elastic Beanstalk), GitHub Actions, Jenkins, Azure DevOps, Terraform, SonarQube, Nginx, Linux.",
+      "Frontend · Visualización: Vue 3 (Composition API), React, Tailwind CSS, Chart.js, Vite, Next.js."
+    ],
+    "stack": [
+      "Python", "FastAPI", "Java", "Spring Boot", "PostgreSQL", "Redis", "LangChain", "Haystack",
+      "OpenSearch", "PyTorch", "TensorFlow", "Scikit-Learn", "FAISS", "ChromaDB",
+      "Docker", "Kubernetes", "AWS", "Terraform", "GitHub Actions", "Vue 3", "React", "Tailwind CSS"
+    ],
+    "category": "skill",
+    "connections": ["fernando-canal", "experience", "education", "auto-profiling"]
   }
 ]

@@ -2,6 +2,9 @@
   <form class="constellation-search" role="search" @submit.prevent="submit">
     <label class="sr-only" for="constellation-query">Buscar en la constelación semántica</label>
     <div class="constellation-search__bar">
+      <span class="constellation-search__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 015.66 11.07l4.13 4.13a1 1 0 01-1.41 1.41l-4.13-4.13A7 7 0 1111 4z" /></svg>
+      </span>
       <input
         id="constellation-query"
         ref="inputRef"
@@ -9,7 +12,7 @@
         type="search"
         maxlength="500"
         autocomplete="off"
-        placeholder="Pregunta por RAG, FastAPI, MLOps, experiencia..."
+        placeholder="Buscar capacidad, proyecto o experiencia"
         class="constellation-search__input"
         @input="$emit('update:modelValue', $event.target.value)"
         @keydown.escape="$emit('clear')"
@@ -22,54 +25,21 @@
         <span v-else>Buscar</span>
       </button>
     </div>
-
-    <div
-      class="constellation-search__chips"
-      :class="{ 'constellation-search__chips--contextual': hasContextualSuggestions }"
-      :aria-label="hasContextualSuggestions ? 'Sugerencias derivadas de los resultados' : 'Sugerencias de búsqueda'"
-    >
-      <button
-        v-for="suggestion in visibleSuggestions"
-        :key="suggestion"
-        type="button"
-        class="constellation-search__chip"
-        @click="pickSuggestion(suggestion)"
-      >
-        {{ suggestion }}
-      </button>
-    </div>
   </form>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
-const props = defineProps({
+defineProps({
   modelValue: { type: String, default: '' },
   isSearching: { type: Boolean, default: false },
-  contextualSuggestions: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'submit', 'clear'])
 const inputRef = ref(null)
 
-const suggestions = [
-  'Sistemas RAG sobre PDFs',
-  'Deploy de LLMs en producción',
-  'FastAPI y microservicios',
-  'Pipelines MLOps con Docker',
-  'Arquitectura backend escalable',
-]
-
-const hasContextualSuggestions = computed(() => props.contextualSuggestions.length > 0)
-const visibleSuggestions = computed(() => hasContextualSuggestions.value ? props.contextualSuggestions : suggestions)
-
 const submit = () => emit('submit')
-
-const pickSuggestion = (suggestion) => {
-  emit('update:modelValue', suggestion)
-  emit('submit', suggestion)
-}
 
 onMounted(() => {
   inputRef.value?.focus()
@@ -79,52 +49,75 @@ onMounted(() => {
 <style scoped>
 .constellation-search {
   display: grid;
-  gap: 14px;
-  width: min(760px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
 }
 
 .constellation-search__bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
   gap: 10px;
-  padding: 8px;
-  border: 1px solid oklch(1 0 0 / 0.10);
-  border-radius: 18px;
-  background: oklch(0.13 0.02 250 / 0.76);
-  box-shadow: 0 20px 70px oklch(0 0 0 / 0.32);
-  backdrop-filter: blur(18px);
+  padding: 6px 8px 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  backdrop-filter: blur(14px);
+  transition: border-color 200ms var(--constellation-ease-out);
+}
+
+.constellation-search__bar:focus-within {
+  border-color: var(--color-border-strong);
+}
+
+.constellation-search__icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--color-muted);
+}
+
+.constellation-search__icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
 }
 
 .constellation-search__input {
   min-width: 0;
-  flex: 1;
   border: 0;
   outline: 0;
   background: transparent;
-  color: oklch(0.94 0.01 250);
-  font-size: 15px;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 14px;
   line-height: 1.4;
-  padding: 12px 12px 12px 16px;
+  padding: 11px 4px;
 }
 
 .constellation-search__input::placeholder {
-  color: oklch(0.80 0.02 250 / 0.48);
-}
-
-.constellation-search__input:focus-visible {
-  outline: 2px solid var(--color-brand-400);
-  outline-offset: 6px;
-  border-radius: 12px;
+  color: var(--color-muted-2);
 }
 
 .constellation-search__submit {
-  min-width: 112px;
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
+  min-width: 96px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--color-accent);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.constellation-search__submit:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.10);
 }
 
 .constellation-search__loading {
@@ -135,58 +128,24 @@ onMounted(() => {
 }
 
 .constellation-search__spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid oklch(1 0 0 / 0.32);
-  border-top-color: white;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid rgba(0, 229, 255, 0.32);
+  border-top-color: var(--color-accent);
   border-radius: 999px;
   animation: constellation-search-spin 780ms linear infinite;
 }
 
 .constellation-search__submit:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.4;
+  border-color: var(--color-border);
+  color: var(--color-muted);
 }
 
-.constellation-search__submit:focus-visible,
-.constellation-search__chip:focus-visible {
-  outline: 2px solid var(--color-brand-400);
+.constellation-search__submit:focus-visible {
+  outline: 1px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-.constellation-search__chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.constellation-search__chips--contextual {
-  justify-content: flex-start;
-  width: min(760px, calc(100vw - 32px));
-  margin-inline: auto;
-}
-
-.constellation-search__chip {
-  min-height: 34px;
-  padding: 6px 14px;
-  border: 1px solid oklch(0.55 0.20 250 / 0.3);
-  border-radius: 999px;
-  background: transparent;
-  color: oklch(0.90 0.01 250);
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
-}
-
-.constellation-search__chip:hover {
-  border-color: oklch(0.55 0.20 250 / 0.55);
-  background: oklch(0.55 0.20 250 / 0.1);
-}
-
-.constellation-search__chips--contextual .constellation-search__chip {
-  border-color: oklch(0.70 0.15 200 / 0.34);
-  background: oklch(0.70 0.15 200 / 0.08);
 }
 
 @keyframes constellation-search-spin {
@@ -195,15 +154,13 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .constellation-search__bar {
-    flex-direction: column;
+    grid-template-columns: auto 1fr;
+    padding: 8px;
   }
 
   .constellation-search__submit {
-    min-height: 44px;
-  }
-
-  .constellation-search__chip {
-    min-height: 44px;
+    grid-column: 1 / -1;
+    min-height: 40px;
   }
 }
 

@@ -111,6 +111,11 @@ def central_anchors(rag_index: RAGIndex) -> list[dict]:
     ]
 
 
+def list_nodes(rag_index: RAGIndex) -> list[dict]:
+    """Return every node with score=None — used to render the graph at rest."""
+    return [_node_response(node, None) for node in rag_index.nodes]
+
+
 def match_nodes(query: str, rag_index: RAGIndex) -> list[dict]:
     """Return all constellation nodes with semantic scores.
 
@@ -156,7 +161,10 @@ def format_context(results: list[dict]) -> str:
             "project": "Proyecto",
             "experience": "Experiencia",
             "experience-bundle": "Experiencia",
+            "education": "Educación",
             "education-bundle": "Educación",
+            "certification": "Certificación",
+            "skill": "Skill",
             "person": "Perfil",
         }.get(result["source"], "Portfolio")
         context_parts.append(

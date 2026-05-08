@@ -27,7 +27,7 @@ import datetime
 
 from rag.indexer import build_index, RAGIndex
 from rag.agent import generate_response
-from rag.retriever import match_nodes
+from rag.retriever import list_nodes, match_nodes
 
 # ─── Logging ──────────────────────────────────────────────────
 logging.basicConfig(
@@ -167,6 +167,25 @@ async def get_projects():
     with open(projects_path, "r", encoding="utf-8") as f:
         projects = json.load(f)
     return JSONResponse(content=projects)
+
+
+@app.get("/v1/constellation")
+async def constellation():
+    """Return every constellation node with null scores (no LLM call).
+
+    Used by the frontend to render the full graph on mount, before the user
+    triggers a semantic search.
+    """
+    if rag_index is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "RAG index unavailable",
+                "message": "El índice semántico está iniciándose. Intenta de nuevo en unos segundos.",
+            },
+        )
+
+    return JSONResponse(content=list_nodes(rag_index=rag_index))
 
 
 @app.post("/v1/match")

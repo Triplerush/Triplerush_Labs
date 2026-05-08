@@ -28,7 +28,7 @@
              :class="theme === 'dark' ? 'border-white/10' : 'border-black/10'">
           <div class="relative">
             <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                 style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
+                 style="background: var(--color-accent);">
               AI
             </div>
             <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2"
@@ -58,7 +58,6 @@
 
         <!-- Messages -->
         <div ref="messagesContainer"
-             data-lenis-prevent
              class="flex-1 overflow-y-auto px-4 py-4 space-y-4 chat-messages-scroll"
              :class="theme === 'dark' ? 'chat-scroll-dark' : 'chat-scroll-light'"
              @wheel.stop>
@@ -66,7 +65,7 @@
           <!-- Welcome message (always first) -->
           <div class="flex gap-3" v-if="messages.length === 0">
             <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-1"
-                 style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
+                 style="background: var(--color-accent);">
               AI
             </div>
             <div class="rounded-2xl rounded-tl-md px-4 py-3 text-sm max-w-[85%]"
@@ -86,7 +85,7 @@
               <!-- Assistant avatar -->
               <div v-if="msg.role === 'assistant'"
                    class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-1 chat-avatar"
-                   style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
+                   style="background: var(--color-accent);">
                 AI
               </div>
 
@@ -125,7 +124,7 @@
           <!-- Thinking indicator -->
           <div v-if="isThinking" class="flex gap-3">
             <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-1"
-                 style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));">
+                 style="background: var(--color-accent);">
               AI
             </div>
             <div class="rounded-2xl rounded-tl-md px-4 py-3.5"
@@ -184,7 +183,7 @@
             <button type="submit"
                     :disabled="!inputText.trim() || isThinking"
                     class="p-2.5 rounded-xl text-white transition-all duration-200 shrink-0 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-                    style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));"
+                    style="background: var(--color-accent);"
                     id="chat-send-btn">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -198,19 +197,18 @@
 
     <!-- ─── Floating Bubble ─────────────────────────────── -->
     <button @click="toggleChat"
-            class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 chat-bubble-btn"
-            :class="isOpen ? 'rotate-0' : 'animate-pulse-glow'"
-            style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));"
+            class="w-12 h-12 rounded-full flex items-center justify-center shadow-md cursor-pointer transition-colors duration-200 chat-bubble-btn"
+            style="background: var(--color-bg); border: 1px solid var(--color-accent);"
             id="chat-toggle-btn"
             aria-label="Toggle AI Chat">
       <!-- Chat icon (closed state) -->
-      <svg v-if="!isOpen" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      <svg v-if="!isOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-accent);">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
       </svg>
       <!-- Close icon (open state) -->
-      <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-accent);">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
 
@@ -616,10 +614,10 @@ function openProject(project) {
 
 /* ─── Chat Bubble Button ───────────────────────────────── */
 .chat-bubble-btn {
-  box-shadow: 0 8px 30px oklch(0.55 0.20 250 / 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
 }
 .chat-bubble-btn:hover {
-  box-shadow: 0 12px 40px oklch(0.55 0.20 250 / 0.5);
+  background: rgba(0, 229, 255, 0.06) !important;
 }
 
 /* ─── Chat Panel Shadow ────────────────────────────────── */
@@ -646,24 +644,25 @@ textarea {
 }
 
 .chat-bubble-user {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
-  box-shadow: 0 4px 14px oklch(0.55 0.20 290 / 0.25);
+  background: rgba(0, 229, 255, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.32);
+  color: var(--color-text);
 }
 
 .chat-bubble-assistant-dark {
-  background: linear-gradient(180deg, oklch(0.22 0.02 250), oklch(0.19 0.02 250));
-  color: oklch(0.95 0 0 / 0.92);
-  border: 1px solid oklch(1 0 0 / 0.06);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(245, 247, 250, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 .chat-bubble-assistant-light {
-  background: linear-gradient(180deg, oklch(0.98 0.005 250), oklch(0.96 0.005 250));
-  color: oklch(0.28 0.02 250);
-  border: 1px solid oklch(0 0 0 / 0.05);
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(20, 22, 26, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .chat-avatar {
-  box-shadow: 0 2px 10px oklch(0.55 0.20 290 / 0.35);
+  box-shadow: none;
 }
 
 /* ─── Project chips (clickable project references) ──────── */
@@ -752,13 +751,10 @@ textarea {
 
 /* ─── Headings ─────────────────────────────────────────── */
 .chat-heading {
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
   margin: 0.6rem 0 0.3rem 0;
-  background: linear-gradient(135deg, var(--color-brand-400), var(--color-accent-400));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-accent);
 }
 .chat-heading-md { font-size: 0.95rem; }
 .chat-heading-sm { font-size: 0.88rem; }
@@ -776,32 +772,24 @@ textarea {
   gap: 0.3rem;
   padding: 0.12rem 0.55rem;
   margin: 0 0.1rem;
-  border-radius: 9999px;
-  font-weight: 600;
+  border-radius: 3px;
+  font-weight: 500;
   text-decoration: none;
-  background: linear-gradient(135deg,
-    oklch(0.55 0.20 250 / 0.18),
-    oklch(0.55 0.20 290 / 0.18));
-  color: var(--color-brand-300);
-  border: 1px solid oklch(0.55 0.20 270 / 0.35);
-  transition: all 0.18s ease;
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--color-accent);
+  border: 1px solid rgba(0, 229, 255, 0.32);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
   cursor: pointer;
 }
 
 .chat-link:hover {
-  background: linear-gradient(135deg,
-    oklch(0.55 0.20 250 / 0.30),
-    oklch(0.55 0.20 290 / 0.30));
-  border-color: oklch(0.60 0.22 270 / 0.65);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px oklch(0.55 0.20 270 / 0.25);
+  background: rgba(0, 229, 255, 0.16);
+  border-color: var(--color-accent);
 }
 
 .light .chat-link {
-  color: var(--color-brand-600);
-  background: linear-gradient(135deg,
-    oklch(0.55 0.20 250 / 0.10),
-    oklch(0.55 0.20 290 / 0.10));
+  background: rgba(0, 184, 204, 0.08);
+  color: var(--color-brand-700);
 }
 
 .chat-link-icon {
