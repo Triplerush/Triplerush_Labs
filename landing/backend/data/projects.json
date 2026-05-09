@@ -17,5 +17,25 @@
     "demonstrates": ["RAG", "Agents", "Model Serving", "Full-stack", "MLOps"],
     "category": "ai-ml",
     "connections": ["fernando-canal", "skills", "experience"]
+  },
+  {
+    "id": "insurance-chatbot",
+    "name": "Insurance Policy Chatbot",
+    "description": "Agente conversacional que responde preguntas sobre pólizas de seguros usando RAG híbrido (BM25 + vectores densos) sobre 22 PDFs reales y búsqueda web complementaria con Tavily.",
+    "summary": "Chatbot RAG con LangGraph, OpenSearch híbrido y Gemini para consultas sobre pólizas de seguros.",
+    "url": "/insurance/",
+    "status": "live",
+    "period": "2026 — Presente",
+    "stack": ["FastAPI", "LangGraph", "Streamlit", "OpenSearch", "HuggingFace", "Gemini", "Tavily", "Docker"],
+    "highlights": [
+      "Agente LangGraph que orquesta retrieval híbrido (BM25 + dense vectors) sobre OpenSearch.",
+      "Pipeline de ingesta automatizado: descarga PDFs públicos, chunking, embeddings y indexación en CI/CD.",
+      "Tool de búsqueda web Tavily como fallback cuando el corpus no cubre la consulta.",
+      "Frontend Streamlit detrás de NPM con subpath y WebSockets para streaming.",
+      "Evaluación con Ragas (faithfulness, answer relevancy, context precision)."
+    ],
+    "demonstrates": ["RAG", "Agents", "Hybrid Search", "LLM Tools", "MLOps"],
+    "category": "ai-ml",
+    "connections": ["fernando-canal", "skills", "experience"]
   }
 ]
