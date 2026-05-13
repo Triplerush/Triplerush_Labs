@@ -3,39 +3,26 @@ retriever.py — Semantic Search Retriever
 
 Uses the NumPy embedding matrix built by indexer.py to find the most
 relevant chunks for a given user query using cosine similarity.
-Embeddings are generated via Gemini gemini-embedding-001.
+Embeddings are generated locally via fastembed (ONNX, no torch).
 """
 
 import logging
 
 import numpy as np
-from google import genai
-from google.genai import types
+from fastembed import TextEmbedding
 
-from rag.indexer import RAGIndex, Chunk, Node, EMBEDDING_MODEL, EMBEDDING_DIM
+from rag.indexer import RAGIndex, Chunk, Node
 
 logger = logging.getLogger(__name__)
 
 
-def _embed_query(client: genai.Client, query: str) -> np.ndarray:
-    """Generate a normalized embedding for a single query.
-
-    Uses RETRIEVAL_QUERY task type (optimized for queries, not documents).
-    """
-    response = client.models.embed_content(
-        model=EMBEDDING_MODEL,
-        contents=query,
-        config=types.EmbedContentConfig(
-            task_type="RETRIEVAL_QUERY",
-            output_dimensionality=EMBEDDING_DIM,
-        ),
-    )
-
-    vector = np.array(response.embeddings[0].values, dtype=np.float32)
+def _embed_query(embedder: TextEmbedding, query: str) -> np.ndarray:
+    """Generate a normalized embedding for a single query."""
+    raw = list(embedder.embed([query]))[0]
+    vector = np.array(raw, dtype=np.float32)
     norm = np.linalg.norm(vector)
     if norm > 0:
         vector = vector / norm
-
     return vector
 
 
@@ -45,24 +32,10 @@ def retrieve(
     top_k: int = 5,
     min_score: float = 0.15,
 ) -> list[dict]:
-    """Retrieve the most relevant chunks for a user query.
+    """Retrieve the most relevant chunks for a user query."""
+    query_vector = _embed_query(rag_index.embedder, query)
 
-    Args:
-        query: Natural language question from the user.
-        rag_index: The RAGIndex containing embeddings, chunks, and genai client.
-        top_k: Maximum number of chunks to return.
-        min_score: Minimum cosine similarity score to include a result.
-
-    Returns:
-        List of dicts with keys: text, source, section, score, metadata.
-    """
-    # Generate query embedding via Gemini
-    query_vector = _embed_query(rag_index.client, query)
-
-    # Cosine similarity = dot product of normalized vectors
     scores = rag_index.embeddings @ query_vector
-
-    # Get top-k indices sorted by score (descending)
     top_indices = np.argsort(scores)[::-1][:top_k]
 
     results = []
@@ -122,7 +95,7 @@ def match_nodes(query: str, rag_index: RAGIndex) -> list[dict]:
     Non-central nodes are sorted by cosine similarity descending. Central
     anchors are included with score=None and are not embedded or scored.
     """
-    query_vector = _embed_query(rag_index.client, query)
+    query_vector = _embed_query(rag_index.embedder, query)
     scores = rag_index.embeddings @ query_vector
 
     node_by_id = {node.id: node for node in rag_index.nodes}
@@ -143,14 +116,7 @@ def match_nodes(query: str, rag_index: RAGIndex) -> list[dict]:
 
 
 def format_context(results: list[dict]) -> str:
-    """Format retrieved chunks into a context string for the LLM prompt.
-
-    Args:
-        results: List of retrieval results from retrieve().
-
-    Returns:
-        Formatted context string with source annotations.
-    """
+    """Format retrieved chunks into a context string for the LLM prompt."""
     if not results:
         return "No se encontró contexto relevante."
 

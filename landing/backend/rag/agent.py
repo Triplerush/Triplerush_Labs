@@ -3,7 +3,7 @@ agent.py — Conversational AI Agent
 
 Orchestrates the RAG pipeline: receives a user message, retrieves
 relevant context, constructs a prompt, and streams the LLM response
-using Gemini via the google-genai SDK (reusing the client from RAGIndex).
+using DigitalOcean Serverless Inference via the OpenAI-compatible SDK.
 """
 
 import json
@@ -11,7 +11,7 @@ import logging
 import os
 from typing import Generator
 
-from google.genai import types as genai_types
+from openai import OpenAI
 
 from rag.indexer import RAGIndex
 from rag.retriever import retrieve, format_context
@@ -47,42 +47,52 @@ FALLBACK_MESSAGE = (
 )
 
 
+_llm_client: OpenAI | None = None
+
+
+def _get_llm_client() -> OpenAI:
+    """Lazy-initialized OpenAI-compatible client.
+
+    Provider-agnostic: works with any OpenAI-compatible endpoint (DigitalOcean
+    Serverless Inference, Together, Groq, OpenRouter, OpenAI, Ollama local).
+    Swap provider by changing LLM_BASE_URL + LLM_MODEL.
+    """
+    global _llm_client
+    if _llm_client is None:
+        api_key = os.getenv("LLM_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "LLM_API_KEY no está configurado. "
+                "Configura la API key del proveedor OpenAI-compatible."
+            )
+        base_url = os.getenv(
+            "LLM_BASE_URL", "https://inference.do-ai.run/v1"
+        )
+        _llm_client = OpenAI(api_key=api_key, base_url=base_url)
+    return _llm_client
+
+
 def _build_messages(
     user_message: str,
     context: str,
     history: list[dict] | None = None,
 ) -> list[dict]:
-    """Build the message list for the LLM call.
+    """Build the OpenAI-style message list (system + history + user)."""
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    Args:
-        user_message: Current user question.
-        context: Retrieved RAG context.
-        history: Previous conversation messages [{"role": "user"|"assistant", "content": "..."}].
-
-    Returns:
-        List of message dicts for the google-genai API.
-    """
-    messages = []
-
-    # Include recent history (last 6 messages max to stay within context window)
     if history:
         for msg in history[-6:]:
-            role = "user" if msg.get("role") == "user" else "model"
-            messages.append({
-                "role": role,
-                "parts": [{"text": msg["content"]}],
-            })
+            role = msg.get("role")
+            if role not in ("user", "assistant"):
+                continue
+            messages.append({"role": role, "content": msg.get("content", "")})
 
-    # Current user message with RAG context injected
     augmented_message = (
         f"Contexto relevante de mi portfolio:\n"
         f"---\n{context}\n---\n\n"
         f"Pregunta del usuario: {user_message}"
     )
-    messages.append({
-        "role": "user",
-        "parts": [{"text": augmented_message}],
-    })
+    messages.append({"role": "user", "content": augmented_message})
 
     return messages
 
@@ -92,25 +102,8 @@ def generate_response(
     rag_index: RAGIndex,
     history: list[dict] | None = None,
 ) -> Generator[str, None, None]:
-    """Generate a streaming RAG response as SSE events.
-
-    This is a sync generator intentionally — FastAPI's StreamingResponse
-    runs sync generators in a threadpool, avoiding event loop blocking
-    during the synchronous Google API calls.
-
-    Args:
-        message: User's question.
-        rag_index: The RAGIndex for context retrieval.
-        history: Previous conversation messages.
-
-    Yields:
-        SSE-formatted strings:
-        - data: {"type": "token", "content": "..."}
-        - data: {"type": "done"}
-        - data: {"type": "error", "message": "..."}
-    """
+    """Generate a streaming RAG response as SSE events."""
     try:
-        # ─── 1. Retrieve relevant context ─────────────────
         results = retrieve(query=message, rag_index=rag_index, top_k=5)
         context = format_context(results)
 
@@ -119,32 +112,28 @@ def generate_response(
             f"Retrieved {len(results)} chunks"
         )
 
-        # ─── 2. Build prompt ──────────────────────────────
         messages = _build_messages(message, context, history)
 
-        # ─── 3. Call Gemini with streaming ────────────────
-        model_name = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
+        client = _get_llm_client()
+        model_name = os.getenv("LLM_MODEL", "openai-gpt-oss-120b")
 
-        # Reuse the client already created during index build
-        client = rag_index.client
-
-        response = client.models.generate_content_stream(
+        stream = client.chat.completions.create(
             model=model_name,
-            contents=messages,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.7,
-                max_output_tokens=1024,
-            ),
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1024,
+            stream=True,
         )
 
-        # ─── 4. Stream tokens ────────────────────────────
-        for chunk in response:
-            if chunk.text:
-                event = json.dumps({"type": "token", "content": chunk.text})
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            content = getattr(delta, "content", None)
+            if content:
+                event = json.dumps({"type": "token", "content": content})
                 yield f"data: {event}\n\n"
 
-        # ─── 5. Done event ────────────────────────────────
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     except Exception as e:

@@ -1,37 +1,32 @@
 services:
   # ─── Landing Page (Vue 3 SPA) ──────────────────────
-  # Escucha interno en :4000 (nginx del contenedor frontend).
-  # En prod: NPM reenvia triplerush.tech/ a portfolio_landing:4000
-  #   via portfolio-net.
-  # En local: mapeo 4000:4000 permite abrir http://localhost:4000/
-  #   sin sudo ni choque con :80.
+  # Escucha interno en :4000 (nginx del contenedor sirve solo estaticos SPA).
+  # En prod: NPM reenvia triplerush.tech/ a portfolio_landing:4000 via portfolio-net.
+  # En local: usar docker-compose.local.yml (gitignored) para exponer el puerto.
   portfolio-landing:
     build: ./landing/frontend
     image: ${LANDING_IMAGE:-ghcr.io/triplerush/portfolio_landing:latest}
     container_name: portfolio_landing
     restart: unless-stopped
-    ports:
-      - "4000:4000"
     networks:
       - portfolio-net
 
   # ─── Chatbot Backend (FastAPI + RAG) ────────────────
   # Escucha interno en :8080 (uvicorn).
-  # En prod: NPM reenvia /v1/* y /health a portfolio_chatbot:8080
-  #   via portfolio-net.
-  # En local: mapeo 8080:8080 para golpear la API directamente
-  #   (ej. curl http://localhost:8080/health).
+  # En prod: NPM reenvia /v1/* y /health a portfolio_chatbot:8080 via portfolio-net
+  #   (configurado como Custom Locations en la UI de NPM).
+  # En local: usar docker-compose.local.yml (gitignored) para exponer el puerto.
   portfolio-chatbot:
     build: ./landing/backend
     image: ${CHATBOT_IMAGE:-ghcr.io/triplerush/portfolio_chatbot:latest}
     container_name: portfolio_chatbot
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash-lite}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://inference.do-ai.run/v1}
+      - LLM_MODEL=${LLM_MODEL:-openai-gpt-oss-120b}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
     volumes:
       - ./landing/backend/data:/app/data
-    ports:
-      - "8080:8080"
     restart: unless-stopped
     networks:
       - portfolio-net

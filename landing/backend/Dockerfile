@@ -2,12 +2,17 @@ FROM python:3.11.15-slim
 
 WORKDIR /app
 
-# Install Python dependencies (no build-essential needed — pure Python packages)
+ARG EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+# Install Python dependencies (fastembed brings ONNX runtime, no torch)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    # Remove pip, setuptools, wheel — not needed at runtime (~20 MB)
-    && pip uninstall -y pip setuptools wheel \
-    # Clean Python cache files
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download embedding model into the image so first request stays fast
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='${EMBEDDING_MODEL}')"
+
+# Trim runtime: remove pip/setuptools/wheel and pyc caches
+RUN pip uninstall -y pip setuptools wheel \
     && find /usr/local/lib/python3.11 -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; \
     true
 

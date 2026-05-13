@@ -1,12 +1,14 @@
 """
 indexer.py — RAG Index Builder
 
-Loads portfolio nodes (JSON), generates embeddings with Gemini
-gemini-embedding-001 via google-genai, and builds an in-memory
-cosine-similarity index using NumPy.
+Loads portfolio nodes (JSON), generates embeddings locally with fastembed
+(ONNX runtime, no PyTorch) and builds an in-memory cosine-similarity index
+using NumPy.
 
-No FAISS, no sentence-transformers, no PyTorch — pure google-genai + NumPy.
-The dataset is small, so a brute-force NumPy search is instant.
+The LLM lives on a separate provider (DigitalOcean Serverless Inference,
+OpenAI-compatible). This module no longer touches the chat client — only
+embeddings and the index. The dataset is small, so a brute-force NumPy
+search is instant.
 """
 
 import json
@@ -17,14 +19,15 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 import numpy as np
-from google import genai
-from google.genai import types
+from fastembed import TextEmbedding
 
 logger = logging.getLogger(__name__)
 
 # ─── Embedding config ────────────────────────────────────────
-EMBEDDING_MODEL = "gemini-embedding-001"
-EMBEDDING_DIM = 256  # reduced dimensionality (256 is enough for ~15 chunks)
+EMBEDDING_MODEL = os.getenv(
+    "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
+EMBEDDING_DIM = 384  # MiniLM-L6 native dim
 
 
 @dataclass
@@ -49,11 +52,11 @@ class Node:
 
 @dataclass
 class RAGIndex:
-    """Container for the embedding matrix and associated chunks."""
+    """Container for the embedding matrix, chunks and the local embedder."""
     embeddings: np.ndarray  # shape: (n_chunks, EMBEDDING_DIM), normalized
     chunks: list[Chunk]
     nodes: list[Node]
-    client: genai.Client
+    embedder: TextEmbedding
 
 
 def _chunk_markdown(text: str, source: str = "cv") -> list[Chunk]:
@@ -63,7 +66,6 @@ def _chunk_markdown(text: str, source: str = "cv") -> list[Chunk]:
     Small chunks (< 20 chars of content) are merged with the previous one.
     """
     chunks = []
-    # Split by ## headers (level 2)
     sections = re.split(r'\n(?=## )', text)
 
     for section in sections:
@@ -71,13 +73,11 @@ def _chunk_markdown(text: str, source: str = "cv") -> list[Chunk]:
         if not section:
             continue
 
-        # Extract header
         lines = section.split('\n', 1)
         header = lines[0].strip().lstrip('#').strip()
         content = lines[1].strip() if len(lines) > 1 else ""
 
         if not content or len(content) < 20:
-            # Too small — merge with previous if possible
             if chunks and len(content) > 0:
                 chunks[-1].text += f"\n\n{section}"
             continue
@@ -212,52 +212,24 @@ def _validate_nodes(nodes: list[Node]) -> None:
         seen.add(node.id)
 
 
-def _embed_texts(client: genai.Client, texts: list[str]) -> np.ndarray:
-    """Generate embeddings for a list of texts using Gemini.
+def _embed_texts(embedder: TextEmbedding, texts: list[str]) -> np.ndarray:
+    """Generate embeddings for a list of texts using fastembed (local ONNX).
 
-    Args:
-        client: google-genai Client instance.
-        texts: List of text strings to embed.
-
-    Returns:
-        Normalized embedding matrix of shape (len(texts), EMBEDDING_DIM).
+    Returns a normalized embedding matrix of shape (len(texts), EMBEDDING_DIM).
     """
-    response = client.models.embed_content(
-        model=EMBEDDING_MODEL,
-        contents=texts,
-        config=types.EmbedContentConfig(
-            task_type="RETRIEVAL_DOCUMENT",
-            output_dimensionality=EMBEDDING_DIM,
-        ),
-    )
+    raw = list(embedder.embed(texts))
+    vectors = np.array(raw, dtype=np.float32)
 
-    vectors = np.array(
-        [e.values for e in response.embeddings],
-        dtype=np.float32,
-    )
-
-    # Normalize for cosine similarity (dot product of unit vectors)
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
-    norms = np.where(norms == 0, 1, norms)  # avoid division by zero
-    vectors = vectors / norms
-
-    return vectors
+    norms = np.where(norms == 0, 1, norms)
+    return vectors / norms
 
 
 def build_index(data_dir: str = "./data") -> RAGIndex:
-    """Build the RAG index from normalized portfolio node data.
-
-    Args:
-        data_dir: Path to the data directory containing projects.json and
-            optionally experiences.json.
-
-    Returns:
-        RAGIndex with embedding matrix, chunks, and the genai client.
-    """
+    """Build the RAG index from normalized portfolio node data."""
     data_path = Path(data_dir)
     all_nodes: list[Node] = []
 
-    # ─── Load Projects ───────────────────────────────────
     projects_path = data_path / "projects.json"
     if projects_path.exists():
         with open(projects_path, "r", encoding="utf-8") as f:
@@ -268,7 +240,6 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
     else:
         logger.warning(f"Projects file not found: {projects_path}")
 
-    # ─── Load Experiences ────────────────────────────────
     experiences_path = data_path / "experiences.json"
     if experiences_path.exists():
         with open(experiences_path, "r", encoding="utf-8") as f:
@@ -286,21 +257,17 @@ def build_index(data_dir: str = "./data") -> RAGIndex:
         logger.error("No data found to index!")
         raise ValueError("No searchable data available for indexing.")
 
-    # ─── Generate embeddings via Gemini ───────────────────
-    api_key = os.getenv("LLM_API_KEY")
-    if not api_key:
-        raise ValueError("LLM_API_KEY not configured. Cannot generate embeddings.")
-
-    client = genai.Client(api_key=api_key)
+    logger.info(f"Loading local embedder: {EMBEDDING_MODEL}")
+    embedder = TextEmbedding(model_name=EMBEDDING_MODEL)
 
     texts = [chunk.text for chunk in all_chunks]
-    logger.info(f"Generating embeddings for {len(texts)} chunks via Gemini {EMBEDDING_MODEL}...")
-    embeddings = _embed_texts(client, texts)
+    logger.info(f"Generating embeddings for {len(texts)} chunks (local ONNX)...")
+    embeddings = _embed_texts(embedder, texts)
     logger.info(f"Index built: {embeddings.shape[0]} vectors (dim={embeddings.shape[1]})")
 
     return RAGIndex(
         embeddings=embeddings,
         chunks=all_chunks,
         nodes=all_nodes,
-        client=client,
+        embedder=embedder,
     )

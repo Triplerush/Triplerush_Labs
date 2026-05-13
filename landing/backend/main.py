@@ -8,8 +8,8 @@ Endpoints:
 
 Architecture reference: GUIA_PORTFOLIO_ORQUESTADOR.md → "Arquitectura del Chatbot"
 
-Implementation note: Uses google-genai SDK directly instead of LangChain.
-See guide note in Fase 2 section for rationale.
+Implementation note: Uses the OpenAI SDK against DigitalOcean Serverless
+Inference for chat, and fastembed (ONNX) for local embeddings.
 """
 
 import json

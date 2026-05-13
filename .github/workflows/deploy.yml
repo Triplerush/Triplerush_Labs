@@ -82,7 +82,11 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
 
             # Crear .env con secrets (no se sube a git)
-            echo "LLM_API_KEY=${{ secrets.LLM_API_KEY }}" > "$DEPLOY_DIR/.env"
+            cat > "$DEPLOY_DIR/.env" <<EOF
+            LLM_API_KEY=${{ secrets.LLM_API_KEY }}
+            LLM_BASE_URL=${{ secrets.LLM_BASE_URL }}
+            LLM_MODEL=${{ secrets.LLM_MODEL }}
+            EOF
 
             # Asegurar red portfolio-net (la crea NPM; este comando es idempotente)
             docker network create portfolio-net 2>/dev/null || true

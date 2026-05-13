@@ -3,11 +3,11 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.0
 python-dotenv==1.0.1
 
-# ─── RAG Pipeline ─────────────────────────────────
-# google-genai: SDK oficial de Google para Gemini
-# Handles both LLM calls AND embeddings (text-embedding-004)
-# No need for sentence-transformers, torch, or faiss.
-google-genai>=1.0.0
+# ─── LLM (DigitalOcean Serverless Inference, OpenAI-compatible) ─
+openai>=1.40.0
+
+# ─── Embeddings locales (ONNX, sin torch) ─────────
+fastembed>=0.3.6
 
 # ─── Utilities ────────────────────────────────────
 pydantic==2.9.0
